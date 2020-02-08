@@ -13,7 +13,7 @@
   <parent>
     <groupId>ball</groupId>
     <artifactId>parent</artifactId>
-    <version>20200131-SNAPSHOT</version>
+    <version>20200207.0</version>
     <relativePath>../ball/parent/pom.xml</relativePath>
   </parent>
   <inceptionYear>2020</inceptionYear>
@@ -46,6 +46,10 @@
     <dependency>
       <groupId>org.eclipse.sisu</groupId>
       <artifactId>org.eclipse.sisu.plexus</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.spdx</groupId>
+      <artifactId>spdx-tools</artifactId>
     </dependency>
   </dependencies>
   <build>
