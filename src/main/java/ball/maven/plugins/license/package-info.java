@@ -4,4 +4,4 @@
  * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
  * @version $Revision$
  */
-package ball.maven.plugins.artifact;
+package ball.maven.plugins.license;

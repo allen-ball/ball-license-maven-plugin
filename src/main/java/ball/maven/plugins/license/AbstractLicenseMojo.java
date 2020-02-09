@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.regex.Pattern;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.maven.artifact.repository.ArtifactRepository;
@@ -16,7 +15,6 @@ import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.project.MavenProjectHelper;
 import org.apache.maven.settings.Settings;
 import org.codehaus.plexus.PlexusConstants;
 import org.codehaus.plexus.PlexusContainer;
@@ -39,23 +37,30 @@ public abstract class AbstractLicenseMojo extends AbstractMojo
                                           implements Contextualizable {
     protected PlexusContainer container = null;
 
-    @Parameter(defaultValue = "${session}", readonly = true, required = true)
+    @Parameter(required = true, readonly = true, defaultValue = "${session}")
+    @Getter
     private MavenSession session = null;
 
-    @Parameter(defaultValue = "${project}", readonly = true, required = false)
-    private MavenProject project = null;
-
-    @Parameter(defaultValue = "${mojoExecution}", readonly = true, required = true)
-    private MojoExecution mojo = null;
-
-    @Parameter(defaultValue = "${plugin}", readonly = true, required = true)
-    private PluginDescriptor plugin = null;
-
-    @Parameter(defaultValue = "${settings}", readonly = true, required = true)
+    @Parameter(required = true, readonly = true, defaultValue = "${settings}")
+    @Getter
     private Settings settings = null;
 
-    @Component(role = MavenProjectHelper.class)
-    private MavenProjectHelper helper = null;
+    @Parameter(required = true, readonly = true, defaultValue = "${mojoExecution}")
+    @Getter
+    private MojoExecution mojo = null;
+
+    @Parameter(required = true, readonly = true, defaultValue = "${plugin}")
+    @Getter
+    private PluginDescriptor plugin = null;
+
+    @Parameter(required = true, readonly = true, defaultValue = "${project}")
+    @Getter
+    private MavenProject project = null;
+
+    @Parameter(required = true, readonly = true,
+               property = "license.file", defaultValue = "${basedir}/LICENSE")
+    @Getter
+    private File file = null;
 
     @Override
     public void contextualize(Context context) throws ContextException {
