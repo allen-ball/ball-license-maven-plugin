@@ -22,6 +22,23 @@
     <maven-plugin-goal-prefix>ball-license</maven-plugin-goal-prefix>
     <maven.javadoc.skip>true</maven.javadoc.skip>
   </properties>
+  <profiles>
+    <profile>
+      <id>test</id>
+      <build>
+        <defaultGoal>
+          ${project.groupId}:${project.artifactId}:update-project-license
+        </defaultGoal>
+        <plugins>
+          <plugin>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>${project.artifactId}</artifactId>
+            <version>${project.version}</version>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
   <dependencies verbose="true">
     <dependency>
       <groupId>org.apache.maven</groupId>
