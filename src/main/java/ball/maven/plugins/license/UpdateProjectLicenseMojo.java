@@ -19,6 +19,7 @@ import org.spdx.compare.LicenseCompareHelper;
 import org.spdx.rdfparser.license.ExtractedLicenseInfo;
 import org.spdx.rdfparser.license.License;
 import org.spdx.rdfparser.license.LicenseInfoFactory;
+import org.spdx.rdfparser.license.ListedLicenses;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.joining;
