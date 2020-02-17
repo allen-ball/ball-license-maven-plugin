@@ -23,6 +23,8 @@ import org.spdx.rdfparser.license.ListedLicenses;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.joining;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.apache.commons.lang3.StringUtils.LF;
 import static org.apache.maven.plugins.annotations.LifecyclePhase.INITIALIZE;
 
 /**
@@ -76,11 +78,11 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
                     .toArray(String[]::new);
                 String text =
                     Files.lines(getFile().toPath(), UTF_8)
-                    .collect(joining("\n", "", "\n"));
+                    .collect(joining(LF, EMPTY, LF));
                 ExtractedLicenseInfo extracted =
                     new ExtractedLicenseInfo(name, text, name, urls, null);
                 String[] ids =
-                    LicenseCompareHelper.matchingStandardLicenseIds(text);
+                    LicenseCompareHelper.matchingStandardLicenseIds(extracted.getExtractedText());
 
                 if (ids != null) {
                     getLog().warn("Project license matches SPDX ID(s): "
