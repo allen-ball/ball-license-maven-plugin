@@ -17,6 +17,13 @@
     <relativePath>../ball/parent/pom.xml</relativePath>
   </parent>
   <inceptionYear>2020</inceptionYear>
+  <licenses>
+    <license>
+      <name>apache_v2</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
   <properties>
     <jre.version>1.8</jre.version>
     <maven-plugin-goal-prefix>ball-license</maven-plugin-goal-prefix>
@@ -24,10 +31,11 @@
   </properties>
   <profiles>
     <profile>
-      <id>test</id>
+      <id>TEST</id>
       <build>
         <defaultGoal>
           ${project.groupId}:${project.artifactId}:update-project-license
+          ${project.groupId}:${project.artifactId}:generate-license-resources
         </defaultGoal>
         <plugins>
           <plugin>

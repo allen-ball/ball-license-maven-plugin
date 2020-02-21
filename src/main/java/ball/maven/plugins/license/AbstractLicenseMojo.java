@@ -3,6 +3,7 @@ package ball.maven.plugins.license;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.CopyOption;
@@ -14,10 +15,14 @@ import java.nio.file.attribute.FileTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import javax.inject.Inject;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.License;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -35,19 +40,43 @@ import static lombok.AccessLevel.PROTECTED;
  */
 @NoArgsConstructor(access = PROTECTED) @ToString @Slf4j
 public abstract class AbstractLicenseMojo extends AbstractMojo {
-    @Parameter(required = true, readonly = true, defaultValue = "${project}")
+    @Inject
+    @Getter
+    private LicenseCatalogManager manager = null;
+
+    @Parameter(defaultValue = "${session}", readonly = true)
+    @Getter
+    private MavenSession session = null;
+
+    @Parameter(defaultValue = "${project}", readonly = true)
     @Getter
     private MavenProject project = null;
 
-    @Parameter(required = true, readonly = true,
-               defaultValue = "${project.licenses}")
+    @Parameter(defaultValue = "${project.licenses}", readonly = true)
     @Getter
     private List<License> licenses = Collections.emptyList();
 
-    @Parameter(required = true, readonly = true,
-               property = "license.file", defaultValue = "${basedir}/LICENSE")
+    @Parameter(defaultValue = "${basedir}/LICENSE",
+               property = "license.file", readonly = true)
     @Getter
     private File file = null;
+
+    @PostConstruct
+    public void init() {
+    }
+
+    @PreDestroy
+    public void destroy() {
+    }
+
+    protected void copy(String from, Path to) throws MojoExecutionException,
+                                                     MojoFailureException {
+        try {
+            copy(new URL(from), to);
+        } catch (MalformedURLException exception) {
+            fail(from, exception);
+        }
+    }
 
     protected void copy(URL from, Path to) throws MojoExecutionException,
                                                   MojoFailureException {
@@ -89,16 +118,14 @@ public abstract class AbstractLicenseMojo extends AbstractMojo {
                     Files.setLastModifiedTime(to, remote);
                 }
 
-                getLog().info(message);
+                log.info(message);
             } else {
-                getLog().info(to + " is up-to-date");
+                log.info(to + " is up-to-date");
             }
         } catch (IOException exception) {
-            getLog().error(message, exception);
-
-            throw new MojoFailureException(exception.getMessage(), exception);
+            fail(message, exception);
         } catch (Throwable throwable) {
-            getLog().error(throwable.getMessage(), throwable);
+            log.error(throwable.getMessage(), throwable);
 
             if (throwable instanceof MojoExecutionException) {
                 throw (MojoExecutionException) throwable;
@@ -109,5 +136,33 @@ public abstract class AbstractLicenseMojo extends AbstractMojo {
                                                  throwable);
             }
         }
+    }
+
+    /**
+     * Log and throw a {@link MojoFailureException}.
+     *
+     * @param   message         The message {@link String}.
+     *
+     * @throws  MojoFailureException
+     *                          Always.
+     */
+    protected void fail(String message) throws MojoFailureException {
+        log.error(message);
+        throw new MojoFailureException(message);
+    }
+
+    /**
+     * Log and throw a {@link MojoFailureException}.
+     *
+     * @param   message         The message {@link String}.
+     * @param   reason          The reason {@link Throwable}.
+     *
+     * @throws  MojoFailureException
+     *                          Always.
+     */
+    protected void fail(String message,
+                        Throwable reason) throws MojoFailureException {
+        log.error(message, reason);
+        throw new MojoFailureException(message, reason);
     }
 }
