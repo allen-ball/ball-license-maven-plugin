@@ -18,13 +18,9 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.apache.maven.project.DefaultProjectBuildingRequest;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.project.ProjectBuilder;
-import org.apache.maven.project.ProjectBuildingRequest;
 
 import static java.util.stream.Collectors.toCollection;
-import static org.apache.maven.model.building.ModelBuildingRequest.VALIDATION_LEVEL_MINIMAL;
 import static org.apache.maven.plugins.annotations.LifecyclePhase.GENERATE_RESOURCES;
 import static org.apache.maven.plugins.annotations.ResolutionScope.TEST;
 
@@ -43,9 +39,11 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
     private static final TreeSet<String> ARCHIVE_PACKAGING =
         Stream.of("jar", "maven-plugin", "ejb", "war", "ear", "rar")
         .collect(toCollection(() -> new TreeSet<>(String.CASE_INSENSITIVE_ORDER)));
+    @Inject
+    private MavenProject project = null;
 
     @Inject
-    private ProjectBuilder builder = null;
+    private ArtifactProjectMap map = null;
 
     @Parameter(defaultValue = "${project.build.outputDirectory}",
                property = "license.resources.directory")
@@ -55,7 +53,7 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         try {
-            String packaging = getProject().getPackaging();
+            String packaging = project.getPackaging();
 
             if (ARCHIVE_PACKAGING.contains(packaging)) {
                 File file = getFile();
@@ -79,27 +77,9 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                 Files.setLastModifiedTime(target,
                                           Files.getLastModifiedTime(source));
 
-                ProjectBuildingRequest request =
-                    new DefaultProjectBuildingRequest(getSession().getProjectBuildingRequest())
-                    .setValidationLevel(VALIDATION_LEVEL_MINIMAL)
-                    .setResolveDependencies(false)
-                    .setProcessPlugins(false);
-
-                for (Artifact artifact : getProject().getArtifacts()) {
-                    MavenProject project =
-                        builder.build(artifact, true, request)
-                        .getProject();
-
-                    project.getArtifact().setScope(artifact.getScope());
-                    project.getArtifact().setGroupId(artifact.getGroupId());
-                    project.getArtifact().setArtifactId(artifact.getArtifactId());
-                    project.getArtifact().setVersion(artifact.getVersion());
-
-                    project.setGroupId(artifact.getGroupId());
-                    project.setArtifactId(artifact.getArtifactId());
-                    project.setVersion(artifact.getVersion());
-log.info(String.valueOf(artifact));
-log.info(String.valueOf(project.getLicenses()));
+                for (Artifact artifact : project.getArtifacts()) {
+log.info(String.valueOf(artifact.getId()));
+log.info(String.valueOf(map.get(artifact).getLicenses()));
                 }
             } else {
                 log.warn("Skipping for '" + packaging +"' packaging");

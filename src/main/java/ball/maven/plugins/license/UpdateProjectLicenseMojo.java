@@ -1,6 +1,7 @@
 package ball.maven.plugins.license;
 
 import java.nio.file.Files;
+import javax.inject.Inject;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
@@ -9,14 +10,16 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.project.MavenProject;
 import org.spdx.rdfparser.license.License;
 
-import static org.spdx.compare.LicenseCompareHelper.isTextStandardLicense;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.joining;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.LF;
 import static org.apache.maven.plugins.annotations.LifecyclePhase.INITIALIZE;
+import static org.spdx.compare.LicenseCompareHelper.isTextStandardLicense;
+import static org.spdx.rdfparser.license.LicenseInfoFactory.parseSPDXLicenseString;
 
 /**
  * {@link org.apache.maven.plugin.Mojo} to update project LICENSE.
@@ -35,6 +38,12 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
      */
     protected static final String SPDX_LICENSE_IDENTIFIER =
         "SPDX-License-Identifier";
+
+    @Inject
+    private MavenProject project = null;
+
+    @Inject
+    private URLLicenseMap map = null;
 
     @Parameter(defaultValue = "${project.licenses[0].name}",
                property = "license.name")
@@ -59,7 +68,7 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
         if (license == null) {
             if (name != null) {
                 try {
-                    license = getManager().parseLicenseString(name);
+                    license = (License) parseSPDXLicenseString(name);
                 } catch (Exception exception) {
                     log.warn("Cannot find SPDX license for " + name);
                 }
@@ -69,7 +78,7 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
         if (license == null) {
             if (url != null) {
                 try {
-                    license = getManager().parseLicenseURL(url);
+                    license = (License) map.get(url);
                 } catch (Exception exception) {
                     log.warn("Cannot find SPDX license for " + url);
                 }
@@ -119,12 +128,18 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
             }
         }
         /*
-         * ... and update the project POM if necessary.
+         * ... update the project POM if necessary, ...
          */
         if (license != null) {
             /*
              * TBD
              */
+        }
+        /*
+         * ... and cache the result.
+         */
+        if (license != null) {
+            /* map.put(project.getArtifact(), license); */
         }
     }
 }

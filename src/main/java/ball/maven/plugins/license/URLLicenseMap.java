@@ -8,7 +8,6 @@ import java.net.URLConnection;
 import java.util.TreeMap;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
-import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import lombok.NoArgsConstructor;
@@ -27,16 +26,16 @@ import static org.apache.commons.lang3.StringUtils.LF;
 import static org.spdx.compare.LicenseCompareHelper.matchingStandardLicenseIds;
 
 /**
- * Provides interfaces to {@link LicenseInfoFactory} and caches the results.
+ * {@link URL} ({@link String} representation) to {@link AnyLicenseInfo}
+ * {@link java.util.Map} implementation.  The {@link #get(Object)} method
+ * transparently calculates and caches any value.
  *
  * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
  * @version $Revision$
  */
 @Named @Singleton
-@NoArgsConstructor @ToString @Slf4j
-public class LicenseCatalogManager {
-    private TreeMap<String,AnyLicenseInfo> map = new TreeMap<>();
-
+@NoArgsConstructor @Slf4j
+public class URLLicenseMap extends TreeMap<String,AnyLicenseInfo> {
     @PostConstruct
     public void init() {
         try {
@@ -46,7 +45,7 @@ public class LicenseCatalogManager {
                 License license = listed.getListedLicenseById(id);
 
                 for (String url : license.getSeeAlso()) {
-                    map.put(url, license);
+                    put(url, license);
                 }
             }
         } catch (Exception exception) {
@@ -58,44 +57,25 @@ public class LicenseCatalogManager {
     public void destroy() {
     }
 
-    /**
-     * Method to parse a license name {@link String} into a {@link License}.
-     *
-     * @param   string          The {@link String} identifying the license.
-     *
-     * @returns The corresponding {@link License}.
-     *
-     * @throws  Exception       If the {@link String} does not specify a
-     *                          {@link License}.
-     */
-    public License parseLicenseString(String string) throws Exception {
-        return (License) LicenseInfoFactory.parseSPDXLicenseString(string);
+    @Override
+    public AnyLicenseInfo get(Object key) {
+        AnyLicenseInfo value = super.get(key);
+
+        if (value == null) {
+            value = compute((String) key);
+
+            put((String) key, value);
+        }
+
+        return value;
     }
 
-    /**
-     * Method to parse a license URL ({@link String}) into a
-     * {@link License}.
-     *
-     * @param   url             The URL (as a {@link String}) identifying
-     *                          the license.
-     *
-     * @returns The corresponding {@link License}.
-     *
-     * @throws  Exception       If the argument URL ({@link String}) does
-     *                          not specify a {@link License}.
-     */
-    public License parseLicenseURL(String url) {
-        AnyLicenseInfo value = map.computeIfAbsent(url, k -> analyze(k));
-
-        return (value instanceof License) ? ((License) value) : null;
-    }
-
-    private AnyLicenseInfo analyze(String key) {
+    private AnyLicenseInfo compute(String url) {
         AnyLicenseInfo value = null;
         String text = EMPTY;
 
         try {
-            URLConnection connection = new URL(key).openConnection();
+            URLConnection connection = new URL(url).openConnection();
 
             try (InputStream in = connection.getInputStream()) {
                 text =
@@ -104,19 +84,19 @@ public class LicenseCatalogManager {
                     .collect(joining(LF, EMPTY, LF));
             }
         } catch (Exception exception) {
-            log.warn("Cannot read " + key, exception);
+            log.warn("Cannot read " + url, exception);
         }
 
         try {
             String[] ids = matchingStandardLicenseIds(text);
 
-            value = parseLicenseString(ids[0]);
+            value = LicenseInfoFactory.parseSPDXLicenseString(ids[0]);
         } catch (Exception exception) {
-            log.warn("Cannot find license for " + key);
+            log.warn("Cannot find license for " + url);
 
             value =
                 new ExtractedLicenseInfo(null, text,
-                                         null, new String[] { key }, null);
+                                         null, new String[] { url }, null);
         }
 
         return value;

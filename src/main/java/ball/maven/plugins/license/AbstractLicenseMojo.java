@@ -17,18 +17,15 @@ import java.util.List;
 import java.util.stream.Stream;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
-import javax.inject.Inject;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.License;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.apache.maven.project.MavenProject;
 
 import static lombok.AccessLevel.PROTECTED;
 
@@ -40,18 +37,6 @@ import static lombok.AccessLevel.PROTECTED;
  */
 @NoArgsConstructor(access = PROTECTED) @ToString @Slf4j
 public abstract class AbstractLicenseMojo extends AbstractMojo {
-    @Inject
-    @Getter
-    private LicenseCatalogManager manager = null;
-
-    @Parameter(defaultValue = "${session}", readonly = true)
-    @Getter
-    private MavenSession session = null;
-
-    @Parameter(defaultValue = "${project}", readonly = true)
-    @Getter
-    private MavenProject project = null;
-
     @Parameter(defaultValue = "${project.licenses}", readonly = true)
     @Getter
     private List<License> licenses = Collections.emptyList();
