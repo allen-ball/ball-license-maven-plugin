@@ -6,6 +6,9 @@ import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.Comparator;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Stream;
 import javax.inject.Inject;
@@ -18,6 +21,7 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
+import org.spdx.rdfparser.license.License;
 
 import static java.util.stream.Collectors.toCollection;
 import static org.apache.maven.plugins.annotations.LifecyclePhase.GENERATE_RESOURCES;
@@ -44,7 +48,8 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
     private File directory = null;
 
     @Inject private MavenProject project = null;
-    @Inject private ArtifactProjectMap map = null;
+    @Inject private ArtifactLicenseMap artifactLicenseMap = null;
+    @Inject private ArtifactProjectMap artifactProjectMap = null;
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
@@ -52,6 +57,37 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
             String packaging = project.getPackaging();
 
             if (ARCHIVE_PACKAGING.contains(packaging)) {
+                TreeMap<Artifact,String> map =
+                    new TreeMap<>(Comparator.comparing(Artifact::getId));
+
+                for (Artifact key : project.getArtifacts()) {
+                    String value = null;
+
+                    if (value == null) {
+                        License license = artifactLicenseMap.get(key);
+
+                        if (license != null) {
+                            value = license.getLicenseId();
+                        }
+                    }
+
+                    if (value == null) {
+                        MavenProject project = artifactProjectMap.get(key);
+
+                        if (project.getLicenses() != null && (! project.getLicenses().isEmpty())) {
+                            value = project.getLicenses().get(0).getName();
+                        }
+                    }
+
+                    if (value == null) {
+                        value = "UNKNOWN";
+                    }
+
+                    map.put(key, value);
+                }
+for (Map.Entry<Artifact,String> entry : map.entrySet()) {
+    log.info(entry.getValue() + "\t" + entry.getKey().getId());
+}
                 File file = getFile();
 
                 if (file.exists() && file.isDirectory()) {
@@ -72,11 +108,6 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                            StandardCopyOption.REPLACE_EXISTING);
                 Files.setLastModifiedTime(target,
                                           Files.getLastModifiedTime(source));
-
-                for (Artifact artifact : project.getArtifacts()) {
-log.info(String.valueOf(artifact.getId()));
-log.info(String.valueOf(map.get(artifact).getLicenses()));
-                }
             } else {
                 log.warn("Skipping for '" + packaging +"' packaging");
             }
