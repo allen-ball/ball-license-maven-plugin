@@ -9,7 +9,6 @@ import java.nio.file.StandardCopyOption;
 import java.util.TreeSet;
 import java.util.stream.Stream;
 import javax.inject.Inject;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -39,16 +38,13 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
     private static final TreeSet<String> ARCHIVE_PACKAGING =
         Stream.of("jar", "maven-plugin", "ejb", "war", "ear", "rar")
         .collect(toCollection(() -> new TreeSet<>(String.CASE_INSENSITIVE_ORDER)));
-    @Inject
-    private MavenProject project = null;
-
-    @Inject
-    private ArtifactProjectMap map = null;
 
     @Parameter(defaultValue = "${project.build.outputDirectory}",
                property = "license.resources.directory")
-    @Getter
     private File directory = null;
+
+    @Inject private MavenProject project = null;
+    @Inject private ArtifactProjectMap map = null;
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {

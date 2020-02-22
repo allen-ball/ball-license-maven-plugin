@@ -12,16 +12,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.FileTime;
-import java.util.Collections;
-import java.util.List;
 import java.util.stream.Stream;
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.maven.model.License;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -37,22 +32,10 @@ import static lombok.AccessLevel.PROTECTED;
  */
 @NoArgsConstructor(access = PROTECTED) @ToString @Slf4j
 public abstract class AbstractLicenseMojo extends AbstractMojo {
-    @Parameter(defaultValue = "${project.licenses}", readonly = true)
-    @Getter
-    private List<License> licenses = Collections.emptyList();
-
     @Parameter(defaultValue = "${basedir}/LICENSE",
                property = "license.file", readonly = true)
     @Getter
     private File file = null;
-
-    @PostConstruct
-    public void init() {
-    }
-
-    @PreDestroy
-    public void destroy() {
-    }
 
     protected void copy(String from, Path to) throws MojoExecutionException,
                                                      MojoFailureException {

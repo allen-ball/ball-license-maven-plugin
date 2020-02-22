@@ -2,7 +2,6 @@ package ball.maven.plugins.license;
 
 import java.nio.file.Files;
 import javax.inject.Inject;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -39,21 +38,16 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
     protected static final String SPDX_LICENSE_IDENTIFIER =
         "SPDX-License-Identifier";
 
-    @Inject
-    private MavenProject project = null;
-
-    @Inject
-    private URLLicenseMap map = null;
-
     @Parameter(defaultValue = "${project.licenses[0].name}",
                property = "license.name")
-    @Getter
     private String name = null;
 
     @Parameter(defaultValue = "${project.licenses[0].url}",
                property = "license.url")
-    @Getter
     private String url = null;
+
+    @Inject private MavenProject project = null;
+    @Inject private URLLicenseMap map = null;
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
