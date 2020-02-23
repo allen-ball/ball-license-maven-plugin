@@ -85,9 +85,7 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
 
                     map.put(key, value);
                 }
-for (Map.Entry<Artifact,String> entry : map.entrySet()) {
-    log.info(entry.getValue() + "\t" + entry.getKey().getId());
-}
+
                 File file = getFile();
 
                 if (file.exists() && file.isDirectory()) {
