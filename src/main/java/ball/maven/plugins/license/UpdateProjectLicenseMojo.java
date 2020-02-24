@@ -1,6 +1,7 @@
 package ball.maven.plugins.license;
 
 import java.nio.file.Files;
+import java.util.Arrays;
 import javax.inject.Inject;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
@@ -46,6 +47,15 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
                property = "license.url")
     private String url = null;
 
+    @Parameter(defaultValue = "false", property = "license.download")
+    private boolean download = false;
+
+    @Parameter(defaultValue = "true", property = "license.overwrite")
+    private boolean overwrite = true;
+
+    @Parameter(defaultValue = "true", property = "license.verify")
+    private boolean verify = true;
+
     @Inject private MavenProject project = null;
     @Inject private ArtifactLicenseMap artifactLicenseMap = null;
     @Inject private URLLicenseMap urlLicenseMap = null;
@@ -89,46 +99,45 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
         /*
          * ... update the project copy, ...
          */
-        if (url != null) {
-            copy(url, getFile().toPath());
-        } else if (license != null) {
-            try {
-                Files.write(getFile().toPath(),
-                            license.getStandardLicenseTemplate()
-                            .getBytes(UTF_8));
-            } catch (Exception exception) {
-                fail("Cannot write " + getFile(), exception);
+        if (download || (! getFile().exists())) {
+            if (url != null) {
+                copy(url, getFile().toPath(), overwrite);
             }
         }
         /*
-         * ... verify any pre-existing local copy is actually the specified
-         * license, ...
+         * ... verify any local copy is actually the specified license (and
+         * fail if it is not), ...
          */
-        if (license != null) {
-            try {
-                String text =
-                    Files.lines(getFile().toPath(), UTF_8)
-                    .collect(joining(LF, EMPTY, LF));
-                boolean isDifferenceFound =
-                    isTextStandardLicense(license, text).isDifferenceFound();
+        if (verify) {
+            if (license != null) {
+                try {
+                    String text =
+                        Files.lines(getFile().toPath(), UTF_8)
+                        .collect(joining(LF, EMPTY, LF));
+                    boolean isDifferenceFound =
+                        isTextStandardLicense(license, text)
+                        .isDifferenceFound();
 
-                if (isDifferenceFound) {
-                    fail(getFile() + " does not contain "
-                         + license.getLicenseId() + " license text");
+                    if (isDifferenceFound) {
+                        fail(getFile() + " does not contain "
+                             + license.getLicenseId() + " license text");
+                    }
+                } catch (MojoFailureException exception) {
+                    throw exception;
+                } catch (Exception exception) {
+                    fail("Cannot analyze " + getFile(), exception);
                 }
-            } catch (MojoFailureException exception) {
-                throw exception;
-            } catch (Exception exception) {
-                fail("Cannot analyze " + getFile(), exception);
             }
         }
         /*
          * ... update the project POM if necessary, ...
          */
         if (license != null) {
-            /*
-             * TBD
-             */
+            if (! license.getLicenseId().equals(name)) {
+                /*
+                 * TBD
+                 */
+            }
         }
         /*
          * ... and cache the result.
