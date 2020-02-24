@@ -37,16 +37,51 @@ public abstract class AbstractLicenseMojo extends AbstractMojo {
     @Getter
     private File file = null;
 
-    protected void copy(String from, Path to) throws MojoExecutionException,
-                                                     MojoFailureException {
+    /**
+     * Method to copy from {@link URL} ({@link String} representation) to
+     * local {@link Path}.
+     *
+     * @param   from            The source {@link URL} ({@link String}
+     *                          representation).
+     * @param   to              The target {@link Path}.
+     * @param   overwrite       Whether or not to overwrite an existing
+     *                          {@link Path}.
+     *
+     * @throws  MojoExecutionException
+     *                          See
+     *                          {@link org.apache.maven.plugin.Mojo#execute()}.
+     * @throws  MojoFailureException
+     *                          See
+     *                          {@link org.apache.maven.plugin.Mojo#execute()}.
+     */
+    protected void copy(String from, Path to,
+                        boolean overwrite) throws MojoExecutionException,
+                                                  MojoFailureException {
         try {
-            copy(new URL(from), to);
+            copy(new URL(from), to, overwrite);
         } catch (MalformedURLException exception) {
             fail(from, exception);
         }
     }
 
-    protected void copy(URL from, Path to) throws MojoExecutionException,
+    /**
+     * Method to copy from {@link URL} ({@link String} representation) to
+     * local {@link Path}.
+     *
+     * @param   from            The source {@link URL}.
+     * @param   to              The target {@link Path}.
+     * @param   overwrite       Whether or not to overwrite an existing
+     *                          {@link Path}.
+     *
+     * @throws  MojoExecutionException
+     *                          See
+     *                          {@link org.apache.maven.plugin.Mojo#execute()}.
+     * @throws  MojoFailureException
+     *                          See
+     *                          {@link org.apache.maven.plugin.Mojo#execute()}.
+     */
+    protected void copy(URL from, Path to,
+                        boolean overwrite) throws MojoExecutionException,
                                                   MojoFailureException {
         String message = null;
 
@@ -75,7 +110,7 @@ public abstract class AbstractLicenseMojo extends AbstractMojo {
             if (isNewer) {
                 CopyOption[] options =
                     Stream.of(StandardCopyOption.REPLACE_EXISTING)
-                    .filter(t -> false)
+                    .filter(t -> isNewer & overwrite)
                     .toArray(CopyOption[]::new);
 
                 try (InputStream in = connection.getInputStream()) {
