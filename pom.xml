@@ -50,6 +50,10 @@
   <dependencies verbose="true">
     <dependency>
       <groupId>org.spdx</groupId>
+      <artifactId>licenseListPublisher</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.spdx</groupId>
       <artifactId>spdx-tools</artifactId>
     </dependency>
   </dependencies>

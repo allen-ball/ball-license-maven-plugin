@@ -1,5 +1,7 @@
 package ball.maven.plugins.license;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -35,6 +37,7 @@ import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.LF;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.spdx.compare.LicenseCompareHelper.matchingStandardLicenseIds;
 import static org.spdx.rdfparser.license.LicenseInfoFactory.parseSPDXLicenseString;
 
@@ -63,15 +66,41 @@ public class URLLicenseMap extends TreeMap<String,AnyLicenseInfo> {
             ListedLicenses listed = ListedLicenses.getListedLicenses();
 
             for (String id : listed.getSpdxListedLicenseIds()) {
-                License license = listed.getListedLicenseById(id);
+                License value = listed.getListedLicenseById(id);
 
-                for (String url : license.getSeeAlso()) {
-                    put(url, license);
+                for (String key : value.getSeeAlso()) {
+                    if (! containsKey(key)) {
+                        put(key, value);
+                    }
                 }
             }
+
+            URL url =
+                getClass().getClassLoader()
+                .getResource("resources/licenses-full.json");
+            for (JsonNode node :
+                     new ObjectMapper().readTree(url).at("/licenses")) {
+                JsonNode keys = node.at("/uris");
+                String id = node.at("/identifiers/spdx[0]").asText();
+
+                if (isNotEmpty(id)) {
+                    License value = listed.getListedLicenseById(id);
+
+                    for (JsonNode key : keys) {
+                        if (! containsKey(key.asText())) {
+                            put(key.asText(), value);
+                        }
+                    }
+                }
+            }
+
+            put("https://glassfish.dev.java.net/public/CDDLv1.0.html",
+                listed.getListedLicenseById("CDDL-1.0"));
+            put("https://www.mozilla.org/MPL/MPL-1.0.txt",
+                listed.getListedLicenseById("MPL-1.0"));
             /*
-             * putIfAbsent("https://glassfish.dev.java.net/public/CDDLv1.0.html", null);
-             * putIfAbsent("https://www.mozilla.org/MPL/MPL-1.0.txt", null);
+             * FileNotFoundException heuristic:
+             * www.mozilla.org -> www-archive.mozilla.org
              */
         } catch (Exception exception) {
             throw new IllegalStateException(exception);
