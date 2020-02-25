@@ -1,11 +1,17 @@
 package ball.maven.plugins.license;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.nio.file.Files;
 import java.util.Arrays;
 import javax.inject.Inject;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.maven.model.Model;
+import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
+import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
@@ -17,6 +23,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.joining;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.LF;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.maven.plugins.annotations.LifecyclePhase.INITIALIZE;
 import static org.spdx.compare.LicenseCompareHelper.isTextStandardLicense;
 import static org.spdx.rdfparser.license.LicenseInfoFactory.parseSPDXLicenseString;
@@ -133,9 +140,37 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
          * ... update the project POM if necessary, ...
          */
         if (license != null) {
-            if (! license.getLicenseId().equals(name)) {
+            File pom = project.getFile();
+            Model model = null;
+
+            try (FileInputStream in = new FileInputStream(pom)) {
+                model = new MavenXpp3Reader().read(in);
+            } catch (Exception exception) {
+                fail("Cannot read " + pom, exception);
+            }
+
+            if (isBlank(model.getInceptionYear())
+                || (model.getLicenses() == null
+                    || model.getLicenses().size() != 1)
+                || (! license.getLicenseId().equals(name))) {
                 /*
-                 * TBD
+                 * org.apache.maven.model.License update =
+                 *     project.getLicenses().get(0).clone();
+                 *
+                 * update.setName(license.getLicenseId());
+                 *
+                 * model.setLicenses(Arrays.asList(update));
+                 *
+                 * File backup =
+                 *     new File(pom.getParentFile(), pom.getName() + ".bak");
+                 *
+                 * pom.renameTo(backup);
+                 *
+                 * try (FileOutputStream out = new FileOutputStream(pom)) {
+                 *     new MavenXpp3Writer().write(out, model);
+                 * } catch (Exception exception) {
+                 *     fail("Cannot write " + pom, exception);
+                 * }
                  */
             }
         }
