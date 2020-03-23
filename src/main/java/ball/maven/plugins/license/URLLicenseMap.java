@@ -159,7 +159,6 @@ public class URLLicenseMap extends TreeMap<String,AnyLicenseInfo> {
                         log.warn("Cannot read " + url);
                         log.debug(exception.getMessage(), exception);
                     } catch (Exception exception) {
-                        log.warn("Cannot find license for " + url);
                     }
 
                     if (value == null) {
