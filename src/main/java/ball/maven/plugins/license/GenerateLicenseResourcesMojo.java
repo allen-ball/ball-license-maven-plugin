@@ -2,15 +2,18 @@ package ball.maven.plugins.license;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.TreeSet;
 import java.util.stream.Stream;
 import javax.inject.Inject;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -22,6 +25,10 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
 
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static java.nio.file.StandardOpenOption.CREATE;
+import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
+import static java.nio.file.StandardOpenOption.WRITE;
 import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toList;
 import static org.apache.maven.plugins.annotations.LifecyclePhase.GENERATE_RESOURCES;
@@ -79,14 +86,15 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                     .filter(StringUtils::isNotBlank)
                     .forEach(t -> scope.remove(t));
 
-                List<Artifact> list =
+                List<Row> list =
                     project.getArtifacts()
                     .stream()
                     .filter(t -> scope.contains(t.getScope()))
+                    .map(t -> new Row(t, artifactAnyLicenseInfoMap.get(t)))
                     .collect(toList());
-
-                list.stream().forEach(t -> artifactAnyLicenseInfoMap.get(t));
-
+                /*
+                 * LICENSE
+                 */
                 File file = getFile();
 
                 if (file.exists() && file.isDirectory()) {
@@ -103,10 +111,27 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                 Path target = directory.toPath().resolve(source.getFileName());
 
                 Files.createDirectories(directory.toPath());
-                Files.copy(file.toPath(), target,
-                           StandardCopyOption.REPLACE_EXISTING);
+                Files.copy(file.toPath(), target, REPLACE_EXISTING);
                 Files.setLastModifiedTime(target,
                                           Files.getLastModifiedTime(source));
+                /*
+                 * DEPENDENCIES
+                 */
+                target = directory.toPath().resolve("DEPENDENCIES");
+
+                try (PrintWriter out =
+                         new PrintWriter(Files
+                                         .newBufferedWriter(target,
+                                                            CREATE, WRITE,
+                                                            TRUNCATE_EXISTING))) {
+                    out.println(target.getFileName());
+                    
+                    for (Row row : list) {
+                        out.println();
+                        out.println(String.valueOf(row.getArtifact()));
+                        out.println(String.valueOf(row.getLicense()));
+                    }
+                }
             } else {
                 log.warn("Skipping for '" + packaging +"' packaging");
             }
@@ -124,5 +149,11 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                                                  throwable);
             }
         }
+    }
+
+    @AllArgsConstructor @Getter @Setter @ToString
+    private class Row {
+        private Artifact artifact = null;
+        private AnyLicenseInfo license = null;
     }
 }
