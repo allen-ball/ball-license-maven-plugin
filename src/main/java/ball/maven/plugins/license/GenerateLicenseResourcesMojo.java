@@ -6,6 +6,7 @@ import java.io.PrintWriter;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.List;
 import java.util.TreeSet;
 import java.util.stream.Stream;
@@ -18,6 +19,7 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.model.Model;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
@@ -58,6 +60,15 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
         Stream.of("jar", "maven-plugin", "ejb", "war", "ear", "rar")
         .collect(toCollection(() -> new TreeSet<>(String.CASE_INSENSITIVE_ORDER)));
 
+    private static final Comparator<List<AnyLicenseInfo>> LICENSES_ORDER =
+        Comparator.<List<AnyLicenseInfo>>
+        comparingInt(t -> t.size()).reversed()
+        .thenComparing(List::toString);
+    private static final Comparator<Row> REPORT_ORDER =
+        Comparator
+        .comparing(Row::getLicenses, LICENSES_ORDER)
+        .thenComparing(Row::getArtifact, ArtifactModelMap.ORDER);
+
     @Parameter(defaultValue = "${project.build.outputDirectory}",
                property = "license.resources.directory")
     private File directory = null;
@@ -70,6 +81,7 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
 
     @Inject private MavenProject project = null;
     @Inject private ArtifactAnyLicenseInfoMap artifactAnyLicenseInfoMap = null;
+    @Inject private ArtifactModelMap artifactModelMap = null;
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
@@ -92,6 +104,8 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                     .filter(t -> scope.contains(t.getScope()))
                     .map(t -> new Row(t, artifactAnyLicenseInfoMap.get(t)))
                     .collect(toList());
+
+                list.sort(REPORT_ORDER);
                 /*
                  * LICENSE
                  */
@@ -125,11 +139,27 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                                                             CREATE, WRITE,
                                                             TRUNCATE_EXISTING))) {
                     out.println(target.getFileName());
-                    
+
+                    String header = null;
+
                     for (Row row : list) {
+                        if (! row.getLicenses().toString().equals(header)) {
+                            if (header != null) {
+                                out.println();
+                            }
+
+                            header = row.getLicenses().toString();
+                            out.println();
+                            out.println(header);
+                        }
+
+                        Artifact artifact = row.getArtifact();
+                        Model model = artifactModelMap.get(artifact);
+
                         out.println();
-                        out.println(String.valueOf(row.getArtifact()));
-                        out.println(String.valueOf(row.getLicense()));
+                        out.println(model.getName());
+                        out.println(artifact);
+                        out.println(model.getUrl());
                     }
                 }
             } else {
@@ -154,6 +184,6 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
     @AllArgsConstructor @Getter @Setter @ToString
     private class Row {
         private Artifact artifact = null;
-        private AnyLicenseInfo license = null;
+        private List<AnyLicenseInfo> licenses = null;
     }
 }
