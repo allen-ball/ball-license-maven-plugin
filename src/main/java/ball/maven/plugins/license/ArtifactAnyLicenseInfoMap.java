@@ -4,25 +4,29 @@ import java.net.JarURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Comparator;
-import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.project.MavenProject;
+import org.apache.maven.model.Model;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
 import org.spdx.rdfparser.license.ExtractedLicenseInfo;
 import org.spdx.rdfparser.license.License;
 import org.spdx.rdfparser.license.SpdxNoneLicense;
 
-import static java.util.stream.Collectors.toCollection;
+import static java.util.stream.Collectors.toList;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.spdx.rdfparser.license.LicenseInfoFactory.parseSPDXLicenseString;
 
 /**
@@ -35,35 +39,36 @@ import static org.spdx.rdfparser.license.LicenseInfoFactory.parseSPDXLicenseStri
  */
 @Named @Singleton
 @Slf4j
-public class ArtifactAnyLicenseInfoMap extends TreeMap<Artifact,AnyLicenseInfo> {
+public class ArtifactAnyLicenseInfoMap
+             extends TreeMap<Artifact,List<AnyLicenseInfo>> {
     private static final Pattern LICENSE =
         Pattern.compile("(?is)^(.*/|)(LICENSE|about.html)$");
 
-    private final ArtifactProjectMap artifactProjectMap;
+    private final ArtifactModelMap artifactModelMap;
     private final URLAnyLicenseInfoMap urlAnyLicenseInfoMap;
 
     /**
      * Sole constructor.
      *
-     * @param   artifactProjectMap
-     *                          The injected {@link ArtifactProjectMap}.
+     * @param   artifactModelMap
+     *                          The injected {@link ArtifactModelMap}.
      * @param   urlAnyLicenseInfoMap
      *                          The injected {@link URLAnyLicenseInfoMap}.
      */
     @Inject
-    public ArtifactAnyLicenseInfoMap(ArtifactProjectMap artifactProjectMap,
+    public ArtifactAnyLicenseInfoMap(ArtifactModelMap artifactModelMap,
                                      URLAnyLicenseInfoMap urlAnyLicenseInfoMap) {
-        super(Comparator.comparing(Artifact::getId));
+        super(ArtifactModelMap.ORDER);
 
-        this.artifactProjectMap =
-            Objects.requireNonNull(artifactProjectMap);
+        this.artifactModelMap =
+            Objects.requireNonNull(artifactModelMap);
         this.urlAnyLicenseInfoMap =
             Objects.requireNonNull(urlAnyLicenseInfoMap);
     }
 
     @Override
-    public AnyLicenseInfo get(Object key) {
-        AnyLicenseInfo value = super.get(key);
+    public List<AnyLicenseInfo> get(Object key) {
+        List<AnyLicenseInfo> value = super.get(key);
 
         if (value == null) {
             value = compute((Artifact) key);
@@ -74,19 +79,44 @@ public class ArtifactAnyLicenseInfoMap extends TreeMap<Artifact,AnyLicenseInfo> 
         return value;
     }
 
-    private AnyLicenseInfo compute(Artifact artifact) {
-        License license = null;
-        MavenProject project = artifactProjectMap.get(artifact);
-        LinkedHashSet<String> names =
-            project.getLicenses().stream()
-            .map(t -> t.getName())
-            .filter(StringUtils::isNotBlank)
-            .collect(toCollection(LinkedHashSet::new));
-        LinkedHashSet<String> urls =
-            project.getLicenses().stream()
-            .map(t -> t.getUrl())
-            .filter(StringUtils::isNotBlank)
-            .collect(toCollection(LinkedHashSet::new));
+    private List<AnyLicenseInfo> compute(Artifact artifact) {
+        Model model = artifactModelMap.get(artifact);
+        int expected =
+            Math.max((model.getLicenses() != null) ? model.getLicenses().size() : 0, 1);
+        List<AnyLicenseInfo> list =
+            Stream.of(model.getLicenses())
+            .filter(Objects::nonNull)
+            .flatMap(List::stream)
+            .map(t -> urlAnyLicenseInfoMap.parse(t.getName(), t.getUrl()))
+            .filter(Objects::nonNull)
+            .collect(toList());
+        Set<String> urls = scan(artifact);
+
+        Stream.of(model.getLicenses())
+            .filter(Objects::nonNull)
+            .flatMap(List::stream)
+            .filter(t -> isNotBlank(t.getUrl()))
+            .forEach(t -> urls.remove(t.getUrl()));
+
+        list.removeIf(t -> t instanceof SpdxNoneLicense);
+        /*
+         * TBD -- Scan artifact for licenses.
+         */
+        if (list.isEmpty()) {
+            if (model.getLicenses().isEmpty() && urls.isEmpty()) {
+                log.warn(artifact + ": No license(s) specified");
+            } else {
+                log.warn(artifact + ": Cannot find SPDX license");
+                log.debug("        " + artifact.getFile());
+                log.debug("        " + urls);
+            }
+        }
+
+        return list;
+    }
+
+    private Set<String> scan(Artifact artifact) {
+        Set<String> set = new TreeSet<>();
 
         try {
             URL url =
@@ -103,70 +133,20 @@ public class ArtifactAnyLicenseInfoMap extends TreeMap<Artifact,AnyLicenseInfo> 
                         .getValue("Bundle-License");
 
                     if (value != null) {
-                        urls.add(value);
+                        set.add(value);
                     }
                 }
 
                 jar.stream()
                     .filter(t -> LICENSE.matcher(t.getName()).matches())
                     .map(t -> url.toString() + t)
-                    .forEach(t -> urls.add(t));
+                    .forEach(t -> set.add(t));
             }
         } catch (MalformedURLException exception) {
             throw new IllegalStateException(exception);
         } catch (Exception exception) {
         }
 
-        if (license == null) {
-            for (String name : names) {
-                try {
-                    license = (License) parseSPDXLicenseString(name);
-
-                    if (license != null) {
-                        break;
-                    }
-                } catch (Exception exception) {
-                }
-            }
-        }
-
-        if (license == null) {
-            for (String url : urls) {
-                try {
-                    license = (License) urlAnyLicenseInfoMap.get(url);
-
-                    if (license != null) {
-                        break;
-                    }
-                } catch (Exception exception) {
-                }
-            }
-        }
-
-        if (license == null) {
-            if (names.isEmpty() && urls.isEmpty()) {
-                log.warn(artifact + ": No license specified");
-            } else {
-                log.warn(artifact + ": Cannot find SPDX license");
-                log.debug("        " + artifact.getFile());
-                log.debug("        " + names);
-                log.debug("        " + urls);
-            }
-        }
-
-        AnyLicenseInfo value = license;
-
-        if (value == null) {
-            if (! urls.isEmpty()) {
-                value = urlAnyLicenseInfoMap.get(urls.iterator().next());
-            } else if (! names.isEmpty()) {
-                value =
-                    new ExtractedLicenseInfo(names.iterator().next(), null);
-            } else {
-                value = new SpdxNoneLicense();
-            }
-        }
-
-        return value;
+        return set;
     }
 }

@@ -1,5 +1,6 @@
 package ball.maven.plugins.license;
 
+import java.io.File;
 import java.util.Comparator;
 import java.util.Objects;
 import java.util.TreeMap;
@@ -9,6 +10,7 @@ import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.execution.MavenSession;
+import org.apache.maven.model.Model;
 import org.apache.maven.project.DefaultProjectBuildingRequest;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.ProjectBuilder;
@@ -17,7 +19,7 @@ import org.apache.maven.project.ProjectBuildingRequest;
 import static org.apache.maven.model.building.ModelBuildingRequest.VALIDATION_LEVEL_MINIMAL;
 
 /**
- * {@link Artifact} to {@link MavenProject} {@link java.util.Map}
+ * {@link Artifact} to {@link Model} {@link java.util.Map}
  * implementation.  The {@link #get(Object)} method transparently calculates
  * and caches any value.
  *
@@ -26,7 +28,13 @@ import static org.apache.maven.model.building.ModelBuildingRequest.VALIDATION_LE
  */
 @Named @Singleton
 @Slf4j
-public class ArtifactProjectMap extends TreeMap<Artifact,MavenProject> {
+public class ArtifactModelMap extends TreeMap<Artifact,Model> {
+    public static final Comparator<Artifact> ORDER =
+        Comparator
+        .comparing(Artifact::getGroupId)
+        .thenComparing(Artifact::getArtifactId)
+        .thenComparing(Artifact::getVersion);
+
     private final MavenSession session;
     private final ProjectBuilder builder;
 
@@ -37,21 +45,37 @@ public class ArtifactProjectMap extends TreeMap<Artifact,MavenProject> {
      * @param   builder         The injected {@link ProjectBuilder}.
      */
     @Inject
-    public ArtifactProjectMap(MavenSession session, ProjectBuilder builder) {
-        super(Comparator.comparing(Artifact::getId));
+    public ArtifactModelMap(MavenSession session, ProjectBuilder builder) {
+        super(ORDER);
 
         this.session = Objects.requireNonNull(session);
         this.builder = Objects.requireNonNull(builder);
     }
 
     @Override
-    public MavenProject get(Object key) {
-        MavenProject value = super.get(key);
+    public Model get(Object key) {
+        Model value = super.get(key);
 
         if (value == null) {
-            value = compute((Artifact) key);
+            MavenProject project = compute((Artifact) key);
 
-            put((Artifact) key, value);
+            if (project != null) {
+                value = project.getModel();
+
+                MavenProject parent = project.getParent();
+
+                while (parent != null) {
+                    if (! containsKey(parent.getArtifact())) {
+                        put(parent.getArtifact(), parent.getModel());
+                    }
+
+                    parent = parent.getParent();
+                }
+
+                put(project.getArtifact(), value);
+            } else {
+                log.warn(key + ": No Model computed");
+            }
         }
 
         return value;
@@ -59,6 +83,9 @@ public class ArtifactProjectMap extends TreeMap<Artifact,MavenProject> {
 
     private MavenProject compute(Artifact artifact) {
         MavenProject project = null;
+        String name =
+            artifact.getArtifactId() + "-" + artifact.getVersion() + ".pom";
+        File file = new File(artifact.getFile().getParentFile(), name);
         ProjectBuildingRequest request =
             new DefaultProjectBuildingRequest(session.getProjectBuildingRequest())
             .setValidationLevel(VALIDATION_LEVEL_MINIMAL)
@@ -66,7 +93,7 @@ public class ArtifactProjectMap extends TreeMap<Artifact,MavenProject> {
             .setProcessPlugins(false);
 
         try {
-            project = builder.build(artifact, true, request).getProject();
+            project = builder.build(file, request).getProject();
 
             project.getArtifact().setScope(artifact.getScope());
             project.getArtifact().setGroupId(artifact.getGroupId());

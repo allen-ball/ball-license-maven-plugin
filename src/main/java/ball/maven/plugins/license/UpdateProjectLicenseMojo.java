@@ -24,9 +24,9 @@ import static java.util.stream.Collectors.joining;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.LF;
 import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.apache.maven.plugins.annotations.LifecyclePhase.INITIALIZE;
 import static org.spdx.compare.LicenseCompareHelper.isTextStandardLicense;
-import static org.spdx.rdfparser.license.LicenseInfoFactory.parseSPDXLicenseString;
 
 /**
  * {@link org.apache.maven.plugin.Mojo} to update project LICENSE.
@@ -78,21 +78,13 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
         License license = null;
 
         if (license == null) {
-            if (name != null) {
+            if (isNotBlank(name) || isNotBlank(url)) {
                 try {
-                    license = (License) parseSPDXLicenseString(name);
+                    license = (License) urlAnyLicenseInfoMap.parse(name, url);
                 } catch (Exception exception) {
-                    log.warn("Cannot find SPDX license for " + name);
-                }
-            }
-        }
-
-        if (license == null) {
-            if (url != null) {
-                try {
-                    license = (License) urlAnyLicenseInfoMap.get(url);
-                } catch (Exception exception) {
-                    log.warn("Cannot find SPDX license for " + url);
+                    log.warn("Cannot find SPDX license for"
+                             + (isNotBlank(name) ? (" " + name) : "")
+                             + (isNotBlank(url) ? (" " + url) : ""));
                 }
             }
         }
@@ -178,7 +170,8 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
          * ... and cache the result.
          */
         if (license != null) {
-            artifactAnyLicenseInfoMap.put(project.getArtifact(), license);
+            artifactAnyLicenseInfoMap
+                .put(project.getArtifact(), Arrays.asList(license));
         }
     }
 }

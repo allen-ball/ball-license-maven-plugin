@@ -37,6 +37,7 @@ import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.LF;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.spdx.compare.LicenseCompareHelper.matchingStandardLicenseIds;
 import static org.spdx.rdfparser.license.LicenseInfoFactory.parseSPDXLicenseString;
@@ -63,13 +64,19 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
     private static final Pattern CANONICAL =
         Pattern.compile("<([^>]*)>; rel=\"canonical\"");
 
+    private static final ListedLicenses LISTED_LICENSES =
+        ListedLicenses.getListedLicenses();
+
+    private static final TreeMap<String,License> listedLicenseMap =
+        new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+
     @PostConstruct
     public void init() {
         try {
-            ListedLicenses listed = ListedLicenses.getListedLicenses();
+            for (String id : LISTED_LICENSES.getSpdxListedLicenseIds()) {
+                License value = LISTED_LICENSES.getListedLicenseById(id);
 
-            for (String id : listed.getSpdxListedLicenseIds()) {
-                License value = listed.getListedLicenseById(id);
+                listedLicenseMap.put(id, value);
 
                 for (String key : value.getSeeAlso()) {
                     if (! containsKey(key)) {
@@ -87,7 +94,7 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
                 String id = node.at("/identifiers/spdx[0]").asText();
 
                 if (isNotEmpty(id)) {
-                    License value = listed.getListedLicenseById(id);
+                    License value = LISTED_LICENSES.getListedLicenseById(id);
 
                     for (JsonNode key : keys) {
                         if (! containsKey(key.asText())) {
@@ -98,9 +105,9 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
             }
 
             put("https://glassfish.dev.java.net/public/CDDLv1.0.html",
-                listed.getListedLicenseById("CDDL-1.0"));
+                LISTED_LICENSES.getListedLicenseById("CDDL-1.0"));
             put("https://www.mozilla.org/MPL/MPL-1.0.txt",
-                listed.getListedLicenseById("MPL-1.0"));
+                LISTED_LICENSES.getListedLicenseById("MPL-1.0"));
             /*
              * FileNotFoundException heuristic:
              * www.mozilla.org -> www-archive.mozilla.org
@@ -113,22 +120,51 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
     @PreDestroy
     public void destroy() { }
 
-    @Override
-    public AnyLicenseInfo get(Object key) {
-        return get(null, key.toString());
-    }
-
-    public AnyLicenseInfo get(String name, String url) {
-        AnyLicenseInfo value = super.get(url);
+    /**
+     * Entry-point that first attempts to parse {@code name} as an SPDX
+     * license ID and, if that fails, continues to analyze the document at
+     * {@code url}.
+     *
+     * @param   name            The observed name of the license.
+     * @param   url             The {@code URL} of the license document.
+     *
+     * @return  {@link License} if {@code name} can be parsed; the result of
+     *          {@link #get(Object)} otherwise.
+     */
+    public AnyLicenseInfo parse(String name, String url) {
+        AnyLicenseInfo value = null;
 
         if (value == null) {
-            if (name != null) {
-                try {
-                    value = (License) parseSPDXLicenseString(name);
-                } catch (Exception exception) {
+            if (isNotBlank(name)) {
+                if (value == null) {
+                    try {
+                        value =
+                            listedLicenseMap
+                            .get(name.replaceAll("[\\p{Space}]", "-"));
+                    } catch (Exception exception) {
+                    }
+                }
+
+                if (value == null) {
+                    try {
+                        value = (License) parseSPDXLicenseString(name);
+                    } catch (Exception exception) {
+                    }
                 }
             }
         }
+
+        if (value == null) {
+            if (isNotBlank(url)) {
+                value = get(name, url);
+            }
+        }
+
+        return value;
+    }
+
+    private AnyLicenseInfo get(String name, String url) {
+        AnyLicenseInfo value = super.get(url);
 
         if (value == null) {
             value = compute(name, url);
@@ -137,6 +173,11 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
         }
 
         return value;
+    }
+
+    @Override
+    public AnyLicenseInfo get(Object key) {
+        return get(null, key.toString());
     }
 
     private AnyLicenseInfo compute(String name, String url) {
@@ -178,13 +219,11 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
                     }
 
                     if (value == null) {
-                        if (text != null) {
+                        if (isNotBlank(text)) {
                             value =
                                 new ExtractedLicenseInfo(name, text, name,
                                                          new String[] { url },
                                                          null);
-                        } else {
-                            value = new SpdxNoneLicense();
                         }
                     }
                 }
@@ -192,6 +231,10 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
         } catch (Exception exception) {
             log.warn("Cannot read " + url);
             log.debug(exception.getMessage(), exception);
+        }
+
+        if (value == null) {
+            value = new SpdxNoneLicense();
         }
 
         return value;
