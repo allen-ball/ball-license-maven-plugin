@@ -60,6 +60,9 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
                   HttpURLConnection.HTTP_SEE_OTHER)
         .collect(toSet());
 
+    private static final Pattern CANONICAL =
+        Pattern.compile("<([^>]*)>; rel=\"canonical\"");
+
     @PostConstruct
     public void init() {
         try {
@@ -112,18 +115,31 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
 
     @Override
     public AnyLicenseInfo get(Object key) {
-        AnyLicenseInfo value = super.get(key);
+        return get(null, key.toString());
+    }
+
+    public AnyLicenseInfo get(String name, String url) {
+        AnyLicenseInfo value = super.get(url);
 
         if (value == null) {
-            value = compute((String) key);
+            if (name != null) {
+                try {
+                    value = (License) parseSPDXLicenseString(name);
+                } catch (Exception exception) {
+                }
+            }
+        }
 
-            put((String) key, value);
+        if (value == null) {
+            value = compute(name, url);
+
+            put(url, value);
         }
 
         return value;
     }
 
-    private AnyLicenseInfo compute(String url) {
+    private AnyLicenseInfo compute(String name, String url) {
         AnyLicenseInfo value = null;
 
         try {
@@ -137,10 +153,10 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
             String canonicalURL = getCanonicalURL(connection);
 
             if (redirectURL != null) {
-                value = get(redirectURL);
+                value = get(name, redirectURL);
             } else {
                 if (canonicalURL != null && (! canonicalURL.equals(url))) {
-                    value = get(canonicalURL);
+                    value = get(name, canonicalURL);
                 } else {
                     String text = null;
 
@@ -164,7 +180,7 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
                     if (value == null) {
                         if (text != null) {
                             value =
-                                new ExtractedLicenseInfo(null, text, null,
+                                new ExtractedLicenseInfo(name, text, name,
                                                          new String[] { url },
                                                          null);
                         } else {
@@ -204,8 +220,7 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
             if (list != null) {
                 url =
                     list.stream()
-                    .map(t -> Pattern.compile("<([^>]*)>; rel=\"canonical\"")
-                              .matcher(t))
+                    .map(t -> CANONICAL.matcher(t))
                     .filter(t -> t.find())
                     .map(t -> t.group(1))
                     .map(t -> URI.create(connection.getURL().toString())
