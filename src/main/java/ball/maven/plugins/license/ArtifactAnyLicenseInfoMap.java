@@ -1,11 +1,11 @@
 package ball.maven.plugins.license;
 
 import java.net.JarURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.Objects;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
@@ -18,7 +18,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.project.MavenProject;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
+import org.spdx.rdfparser.license.ExtractedLicenseInfo;
 import org.spdx.rdfparser.license.License;
+import org.spdx.rdfparser.license.SpdxNoneLicense;
 
 import static java.util.stream.Collectors.toCollection;
 import static org.spdx.rdfparser.license.LicenseInfoFactory.parseSPDXLicenseString;
@@ -33,32 +35,35 @@ import static org.spdx.rdfparser.license.LicenseInfoFactory.parseSPDXLicenseStri
  */
 @Named @Singleton
 @Slf4j
-public class ArtifactLicenseMap extends TreeMap<Artifact,License> {
+public class ArtifactAnyLicenseInfoMap extends TreeMap<Artifact,AnyLicenseInfo> {
     private static final Pattern LICENSE =
         Pattern.compile("(?is)^(.*/|)(LICENSE|about.html)$");
 
     private final ArtifactProjectMap artifactProjectMap;
-    private final URLLicenseMap urlLicenseMap;
+    private final URLAnyLicenseInfoMap urlAnyLicenseInfoMap;
 
     /**
      * Sole constructor.
      *
      * @param   artifactProjectMap
      *                          The injected {@link ArtifactProjectMap}.
-     * @param   urlLicenseMap   The injected {@link URLLicenseMap}.
+     * @param   urlAnyLicenseInfoMap
+     *                          The injected {@link URLAnyLicenseInfoMap}.
      */
     @Inject
-    public ArtifactLicenseMap(ArtifactProjectMap artifactProjectMap,
-                              URLLicenseMap urlLicenseMap) {
+    public ArtifactAnyLicenseInfoMap(ArtifactProjectMap artifactProjectMap,
+                                     URLAnyLicenseInfoMap urlAnyLicenseInfoMap) {
         super(Comparator.comparing(Artifact::getId));
 
-        this.artifactProjectMap = Objects.requireNonNull(artifactProjectMap);
-        this.urlLicenseMap = Objects.requireNonNull(urlLicenseMap);
+        this.artifactProjectMap =
+            Objects.requireNonNull(artifactProjectMap);
+        this.urlAnyLicenseInfoMap =
+            Objects.requireNonNull(urlAnyLicenseInfoMap);
     }
 
     @Override
-    public License get(Object key) {
-        License value = super.get(key);
+    public AnyLicenseInfo get(Object key) {
+        AnyLicenseInfo value = super.get(key);
 
         if (value == null) {
             value = compute((Artifact) key);
@@ -69,15 +74,15 @@ public class ArtifactLicenseMap extends TreeMap<Artifact,License> {
         return value;
     }
 
-    private License compute(Artifact artifact) {
+    private AnyLicenseInfo compute(Artifact artifact) {
         License license = null;
         MavenProject project = artifactProjectMap.get(artifact);
-        Set<String> names =
+        LinkedHashSet<String> names =
             project.getLicenses().stream()
             .map(t -> t.getName())
             .filter(StringUtils::isNotBlank)
             .collect(toCollection(LinkedHashSet::new));
-        Set<String> urls =
+        LinkedHashSet<String> urls =
             project.getLicenses().stream()
             .map(t -> t.getUrl())
             .filter(StringUtils::isNotBlank)
@@ -107,6 +112,8 @@ public class ArtifactLicenseMap extends TreeMap<Artifact,License> {
                     .map(t -> url.toString() + t)
                     .forEach(t -> urls.add(t));
             }
+        } catch (MalformedURLException exception) {
+            throw new IllegalStateException(exception);
         } catch (Exception exception) {
         }
 
@@ -125,14 +132,13 @@ public class ArtifactLicenseMap extends TreeMap<Artifact,License> {
 
         if (license == null) {
             for (String url : urls) {
-                AnyLicenseInfo info = urlLicenseMap.get(url);
+                try {
+                    license = (License) urlAnyLicenseInfoMap.get(url);
 
-                if (info instanceof License) {
-                    license = (License) info;
-                }
-
-                if (license != null) {
-                    break;
+                    if (license != null) {
+                        break;
+                    }
+                } catch (Exception exception) {
                 }
             }
         }
@@ -141,13 +147,26 @@ public class ArtifactLicenseMap extends TreeMap<Artifact,License> {
             if (names.isEmpty() && urls.isEmpty()) {
                 log.warn(artifact + ": No license specified");
             } else {
-                log.warn(artifact + ": Cannot find license");
+                log.warn(artifact + ": Cannot find SPDX license");
                 log.debug("        " + artifact.getFile());
                 log.debug("        " + names);
                 log.debug("        " + urls);
             }
         }
 
-        return license;
+        AnyLicenseInfo value = license;
+
+        if (value == null) {
+            if (! urls.isEmpty()) {
+                value = urlAnyLicenseInfoMap.get(urls.iterator().next());
+            } else if (! names.isEmpty()) {
+                value =
+                    new ExtractedLicenseInfo(names.iterator().next(), null);
+            } else {
+                value = new SpdxNoneLicense();
+            }
+        }
+
+        return value;
     }
 }

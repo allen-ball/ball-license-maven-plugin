@@ -51,7 +51,7 @@ import static org.spdx.rdfparser.license.LicenseInfoFactory.parseSPDXLicenseStri
  */
 @Named @Singleton
 @NoArgsConstructor @Slf4j
-public class URLLicenseMap extends TreeMap<String,AnyLicenseInfo> {
+public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
     private static final HostnameVerifier NONE = new HostnameVerifierImpl();
 
     private static final Set<Integer> REDIRECT_CODES =

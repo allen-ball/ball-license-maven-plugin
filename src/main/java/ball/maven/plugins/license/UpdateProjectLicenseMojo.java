@@ -64,8 +64,8 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
     private boolean verify = true;
 
     @Inject private MavenProject project = null;
-    @Inject private ArtifactLicenseMap artifactLicenseMap = null;
-    @Inject private URLLicenseMap urlLicenseMap = null;
+    @Inject private ArtifactAnyLicenseInfoMap artifactAnyLicenseInfoMap = null;
+    @Inject private URLAnyLicenseInfoMap urlAnyLicenseInfoMap = null;
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
@@ -90,7 +90,7 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
         if (license == null) {
             if (url != null) {
                 try {
-                    license = (License) urlLicenseMap.get(url);
+                    license = (License) urlAnyLicenseInfoMap.get(url);
                 } catch (Exception exception) {
                     log.warn("Cannot find SPDX license for " + url);
                 }
@@ -178,7 +178,7 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
          * ... and cache the result.
          */
         if (license != null) {
-            artifactLicenseMap.put(project.getArtifact(), license);
+            artifactAnyLicenseInfoMap.put(project.getArtifact(), license);
         }
     }
 }
