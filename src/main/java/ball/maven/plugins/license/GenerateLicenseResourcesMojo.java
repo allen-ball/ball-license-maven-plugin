@@ -8,6 +8,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Stream;
 import javax.inject.Inject;
@@ -31,6 +34,7 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 import static java.nio.file.StandardOpenOption.WRITE;
+import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toList;
 import static org.apache.maven.plugins.annotations.LifecyclePhase.GENERATE_RESOURCES;
@@ -67,7 +71,7 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
     private static final Comparator<Row> REPORT_ORDER =
         Comparator
         .comparing(Row::getLicenses, LICENSES_ORDER)
-        .thenComparing(Row::getArtifact, ArtifactModelMap.ORDER);
+        .thenComparing(t -> t.getArtifacts().get(0), ArtifactModelMap.ORDER);
 
     @Parameter(defaultValue = "${project.build.outputDirectory}",
                property = "license.resources.directory")
@@ -89,20 +93,19 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
             String packaging = project.getPackaging();
 
             if (ARCHIVE_PACKAGING.contains(packaging)) {
-                TreeSet<String> scope =
-                    Stream.of(includeScope.split("[\\p{Punct}\\p{Space}]+"))
-                    .filter(StringUtils::isNotBlank)
-                    .collect(toCollection(() -> new TreeSet<>(String.CASE_INSENSITIVE_ORDER)));
-
-                Stream.of(excludeScope.split("[\\p{Punct}\\p{Space}]+"))
-                    .filter(StringUtils::isNotBlank)
-                    .forEach(t -> scope.remove(t));
-
-                List<Row> list =
+                Set<String> scope = getScope();
+                Map<Artifact,List<Artifact>> map =
                     project.getArtifacts()
                     .stream()
                     .filter(t -> scope.contains(t.getScope()))
-                    .map(t -> new Row(t, artifactAnyLicenseInfoMap.get(t)))
+                    .collect(groupingBy(t -> t,
+                                        () -> new TreeMap<>(ArtifactModelMap.ORDER),
+                                        toList()));
+                List<Row> list =
+                    map.values()
+                    .stream()
+                    .filter(t -> scope.contains(t.get(0).getScope()))
+                    .map(t -> new Row(t, artifactAnyLicenseInfoMap.get(t.get(0))))
                     .collect(toList());
 
                 list.sort(REPORT_ORDER);
@@ -153,8 +156,8 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                             out.println(header);
                         }
 
-                        Artifact artifact = row.getArtifact();
-                        Model model = artifactModelMap.get(artifact);
+                        List<Artifact> artifacts = row.getArtifacts();
+                        Model model = artifactModelMap.get(artifacts.get(0));
 
                         out.println();
 
@@ -162,7 +165,9 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                             out.println(model.getName());
                         }
 
-                        out.println(artifact);
+                        for (Artifact artifact : artifacts) {
+                            out.println(artifact);
+                        }
 
                         if (StringUtils.isNotBlank(model.getUrl())) {
                             out.println(model.getUrl());
@@ -188,9 +193,28 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
         }
     }
 
+    private Set<String> getScope() {
+        TreeSet<String> scope =
+            Stream.of(includeScope.split("[\\p{Punct}\\p{Space}]+"))
+            .filter(StringUtils::isNotBlank)
+            .collect(toCollection(() -> new TreeSet<>(String.CASE_INSENSITIVE_ORDER)));
+
+        Stream.of(excludeScope.split("[\\p{Punct}\\p{Space}]+"))
+            .filter(StringUtils::isNotBlank)
+            .forEach(t -> scope.remove(t));
+
+        if (scope.isEmpty()) {
+            log.warn("Specified scope is empty");
+            log.debug("        includeScope = " + includeScope);
+            log.debug("        excludeScope = " + excludeScope);
+        }
+
+        return scope;
+    }
+
     @AllArgsConstructor @Getter @Setter @ToString
     private class Row {
-        private Artifact artifact = null;
+        private List<Artifact> artifacts = null;
         private List<AnyLicenseInfo> licenses = null;
     }
 }
