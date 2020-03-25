@@ -19,7 +19,7 @@
   <inceptionYear>2020</inceptionYear>
   <licenses>
     <license>
-      <name>apache_v2</name>
+      <name>Apache-2.0</name>
       <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
       <distribution>repo</distribution>
     </license>
@@ -29,24 +29,6 @@
     <maven-plugin-goal-prefix>ball-license</maven-plugin-goal-prefix>
     <maven.javadoc.skip>true</maven.javadoc.skip>
   </properties>
-  <profiles>
-    <profile>
-      <id>TEST</id>
-      <build>
-        <defaultGoal>
-          ${project.groupId}:${project.artifactId}:update-project-license
-          ${project.groupId}:${project.artifactId}:generate-license-resources
-        </defaultGoal>
-        <plugins>
-          <plugin>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>${project.artifactId}</artifactId>
-            <version>${project.version}</version>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-  </profiles>
   <dependencies verbose="true">
     <dependency>
       <groupId>org.spdx</groupId>
