@@ -157,9 +157,16 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                         Model model = artifactModelMap.get(artifact);
 
                         out.println();
-                        out.println(model.getName());
+
+                        if (StringUtils.isNotBlank(model.getName())) {
+                            out.println(model.getName());
+                        }
+
                         out.println(artifact);
-                        out.println(model.getUrl());
+
+                        if (StringUtils.isNotBlank(model.getUrl())) {
+                            out.println(model.getUrl());
+                        }
                     }
                 }
             } else {
