@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Model;
+import org.apache.maven.model.io.ModelReader;
 import org.apache.maven.project.DefaultProjectBuildingRequest;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.ProjectBuilder;
@@ -37,19 +38,23 @@ public class ArtifactModelMap extends TreeMap<Artifact,Model> {
 
     private final MavenSession session;
     private final ProjectBuilder builder;
+    private final ModelReader reader;
 
     /**
      * Sole constructor.
      *
      * @param   session         The injected {@link MavenSession}.
      * @param   builder         The injected {@link ProjectBuilder}.
+     * @param   reader          The injected {@link ModelReader}.
      */
     @Inject
-    public ArtifactModelMap(MavenSession session, ProjectBuilder builder) {
+    public ArtifactModelMap(MavenSession session,
+                            ProjectBuilder builder, ModelReader reader) {
         super(ORDER);
 
         this.session = Objects.requireNonNull(session);
         this.builder = Objects.requireNonNull(builder);
+        this.reader = Objects.requireNonNull(reader);
     }
 
     @Override
@@ -57,56 +62,48 @@ public class ArtifactModelMap extends TreeMap<Artifact,Model> {
         Model value = super.get(key);
 
         if (value == null) {
-            MavenProject project = compute((Artifact) key);
+            value = compute((Artifact) key);
 
-            if (project != null) {
-                value = project.getModel();
-
-                MavenProject parent = project.getParent();
-
-                while (parent != null) {
-                    if (! containsKey(parent.getArtifact())) {
-                        put(parent.getArtifact(), parent.getModel());
-                    }
-
-                    parent = parent.getParent();
-                }
-
-                put(project.getArtifact(), value);
-            } else {
-                log.warn(key + ": No Model computed");
-            }
+            put((Artifact) key, value);
         }
 
         return value;
     }
 
-    private MavenProject compute(Artifact artifact) {
-        MavenProject project = null;
-        String name =
-            artifact.getArtifactId() + "-" + artifact.getVersion() + ".pom";
-        File file = new File(artifact.getFile().getParentFile(), name);
-        ProjectBuildingRequest request =
-            new DefaultProjectBuildingRequest(session.getProjectBuildingRequest())
-            .setValidationLevel(VALIDATION_LEVEL_MINIMAL)
-            .setResolveDependencies(false)
-            .setProcessPlugins(false);
+    private Model compute(Artifact artifact) {
+        Model model =
+            session.getProjects()
+            .stream()
+            .filter(t -> ORDER.compare(t.getArtifact(), artifact) == 0)
+            .map(t -> t.getModel())
+            .filter(Objects::nonNull)
+            .findFirst().orElse(null);
 
-        try {
-            project = builder.build(file, request).getProject();
+        if (model == null) {
+            try {
+                String name =
+                    artifact.getArtifactId()
+                    + "-" + artifact.getVersion() + ".pom";
+                File file = new File(artifact.getFile().getParentFile(), name);
 
-            project.getArtifact().setScope(artifact.getScope());
-            project.getArtifact().setGroupId(artifact.getGroupId());
-            project.getArtifact().setArtifactId(artifact.getArtifactId());
-            project.getArtifact().setVersion(artifact.getVersion());
+                model = reader.read(file, null);
 
-            project.setGroupId(artifact.getGroupId());
-            project.setArtifactId(artifact.getArtifactId());
-            project.setVersion(artifact.getVersion());
-        } catch (Exception exception) {
-            log.warn("Cannot read POM for " + artifact);
+                if (model.getLicenses() == null || model.getLicenses().isEmpty()) {
+                    ProjectBuildingRequest request =
+                        new DefaultProjectBuildingRequest(session.getProjectBuildingRequest())
+                        .setValidationLevel(VALIDATION_LEVEL_MINIMAL)
+                        .setResolveDependencies(false)
+                        .setProcessPlugins(false);
+
+                    model =
+                        builder.build(file, request)
+                        .getProject().getModel();
+                }
+            } catch (Exception exception) {
+                log.warn("Cannot read POM for " + artifact);
+            }
         }
 
-        return project;
+        return model;
     }
 }
