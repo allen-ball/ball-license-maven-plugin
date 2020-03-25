@@ -1,7 +1,5 @@
 package ball.maven.plugins.license;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -18,6 +16,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import javax.net.ssl.HostnameVerifier;
@@ -29,7 +28,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
 import org.spdx.rdfparser.license.ExtractedLicenseInfo;
 import org.spdx.rdfparser.license.License;
-import org.spdx.rdfparser.license.ListedLicenses;
 import org.spdx.rdfparser.license.SpdxNoneLicense;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -38,7 +36,6 @@ import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.LF;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
-import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.spdx.compare.LicenseCompareHelper.matchingStandardLicenseIds;
 import static org.spdx.rdfparser.license.LicenseInfoFactory.parseSPDXLicenseString;
 
@@ -64,20 +61,12 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
     private static final Pattern CANONICAL =
         Pattern.compile("<([^>]*)>; rel=\"canonical\"");
 
-    private static final ListedLicenses LISTED_LICENSES =
-        ListedLicenses.getListedLicenses();
-
-    private static final TreeMap<String,License> listedLicenseMap =
-        new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+    @Inject private LicenseMap licenseMap = null;
 
     @PostConstruct
     public void init() {
         try {
-            for (String id : LISTED_LICENSES.getSpdxListedLicenseIds()) {
-                License value = LISTED_LICENSES.getListedLicenseById(id);
-
-                listedLicenseMap.put(id, value);
-
+            for (License value : licenseMap.values()) {
                 for (String key : value.getSeeAlso()) {
                     if (! containsKey(key)) {
                         put(key, value);
@@ -85,29 +74,10 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
                 }
             }
 
-            URL url =
-                getClass().getClassLoader()
-                .getResource("resources/licenses-full.json");
-            for (JsonNode node :
-                     new ObjectMapper().readTree(url).at("/licenses")) {
-                JsonNode keys = node.at("/uris");
-                String id = node.at("/identifiers/spdx[0]").asText();
-
-                if (isNotEmpty(id)) {
-                    License value = LISTED_LICENSES.getListedLicenseById(id);
-
-                    for (JsonNode key : keys) {
-                        if (! containsKey(key.asText())) {
-                            put(key.asText(), value);
-                        }
-                    }
-                }
-            }
-
             put("https://glassfish.dev.java.net/public/CDDLv1.0.html",
-                LISTED_LICENSES.getListedLicenseById("CDDL-1.0"));
+                licenseMap.get("CDDL-1.0"));
             put("https://www.mozilla.org/MPL/MPL-1.0.txt",
-                LISTED_LICENSES.getListedLicenseById("MPL-1.0"));
+                licenseMap.get("MPL-1.0"));
             /*
              * FileNotFoundException heuristic:
              * www.mozilla.org -> www-archive.mozilla.org
@@ -137,12 +107,7 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
         if (value == null) {
             if (isNotBlank(name)) {
                 if (value == null) {
-                    try {
-                        value =
-                            listedLicenseMap
-                            .get(name.replaceAll("[\\p{Space}]", "-"));
-                    } catch (Exception exception) {
-                    }
+                    value = licenseMap.get(name);
                 }
 
                 if (value == null) {

@@ -3,7 +3,9 @@ package ball.maven.plugins.license;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URL;
+import java.util.Objects;
 import java.util.TreeMap;
+import java.util.stream.Stream;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import org.spdx.rdfparser.license.License;
@@ -48,5 +50,24 @@ public class LicenseMap extends TreeMap<String,License> {
         } catch (Exception exception) {
             throw new ExceptionInInitializerError(exception);
         }
+    }
+
+    @Override
+    public License get(Object key) {
+        License value = super.get(key);
+
+        if (value == null) {
+            if (key instanceof CharSequence) {
+                String string = key.toString();
+
+                value =
+                    Stream.of(string, string.replaceAll("[\\p{Space}]", "-"))
+                    .map(t -> super.get(t))
+                    .filter(Objects::nonNull)
+                    .findFirst().orElse(null);
+            }
+        }
+
+        return value;
     }
 }
