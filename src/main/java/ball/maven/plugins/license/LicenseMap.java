@@ -6,8 +6,11 @@ import java.net.URL;
 import java.util.Objects;
 import java.util.TreeMap;
 import java.util.stream.Stream;
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.inject.Named;
 import javax.inject.Singleton;
+import lombok.extern.slf4j.Slf4j;
 import org.spdx.rdfparser.license.License;
 import org.spdx.rdfparser.license.ListedLicenses;
 
@@ -20,6 +23,7 @@ import org.spdx.rdfparser.license.ListedLicenses;
  * @version $Revision$
  */
 @Named @Singleton
+@Slf4j
 public class LicenseMap extends TreeMap<String,License> {
     private static final ListedLicenses LICENSES =
         ListedLicenses.getListedLicenses();
@@ -50,6 +54,14 @@ public class LicenseMap extends TreeMap<String,License> {
         } catch (Exception exception) {
             throw new ExceptionInInitializerError(exception);
         }
+    }
+
+    @PostConstruct
+    public void init() { }
+
+    @PreDestroy
+    public void destroy() {
+        log.debug("LicenseMap.size() = " + size());
     }
 
     @Override

@@ -205,8 +205,8 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
 
         if (scope.isEmpty()) {
             log.warn("Specified scope is empty");
-            log.debug("        includeScope = " + includeScope);
-            log.debug("        excludeScope = " + excludeScope);
+            log.debug("    includeScope = " + includeScope);
+            log.debug("    excludeScope = " + excludeScope);
         }
 
         return scope;

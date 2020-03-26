@@ -4,6 +4,8 @@ import java.io.File;
 import java.util.Comparator;
 import java.util.Objects;
 import java.util.TreeMap;
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
@@ -55,6 +57,14 @@ public class ArtifactModelMap extends TreeMap<Artifact,Model> {
         this.session = Objects.requireNonNull(session);
         this.builder = Objects.requireNonNull(builder);
         this.reader = Objects.requireNonNull(reader);
+    }
+
+    @PostConstruct
+    public void init() { }
+
+    @PreDestroy
+    public void destroy() {
+        log.debug("ArtifactModelMap.size() = " + size());
     }
 
     @Override

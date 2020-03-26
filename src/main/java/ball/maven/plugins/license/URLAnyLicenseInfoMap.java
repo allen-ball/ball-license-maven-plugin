@@ -88,7 +88,9 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
     }
 
     @PreDestroy
-    public void destroy() { }
+    public void destroy() {
+        log.debug("URLAnyLicenseInfoMap.size() = " + size());
+    }
 
     /**
      * Entry-point that first attempts to parse {@code name} as an SPDX
