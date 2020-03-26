@@ -89,7 +89,7 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
 
     @PreDestroy
     public void destroy() {
-        log.debug("URLAnyLicenseInfoMap.size() = " + size());
+        log.debug(getClass().getSimpleName() + ".size() = " + size());
     }
 
     /**

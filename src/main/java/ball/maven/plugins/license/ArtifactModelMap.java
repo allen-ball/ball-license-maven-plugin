@@ -64,7 +64,7 @@ public class ArtifactModelMap extends TreeMap<Artifact,Model> {
 
     @PreDestroy
     public void destroy() {
-        log.debug("ArtifactModelMap.size() = " + size());
+        log.debug(getClass().getSimpleName() + ".size() = " + size());
     }
 
     @Override

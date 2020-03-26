@@ -61,7 +61,7 @@ public class LicenseMap extends TreeMap<String,License> {
 
     @PreDestroy
     public void destroy() {
-        log.debug("LicenseMap.size() = " + size());
+        log.debug(getClass().getSimpleName() + ".size() = " + size());
     }
 
     @Override
@@ -73,7 +73,8 @@ public class LicenseMap extends TreeMap<String,License> {
                 String string = key.toString();
 
                 value =
-                    Stream.of(string, string.replaceAll("[\\p{Space}]", "-"))
+                    Stream.of(string,
+                              string.replaceAll("[\\p{Space}]", "-"))
                     .map(t -> super.get(t))
                     .filter(Objects::nonNull)
                     .findFirst().orElse(null);
