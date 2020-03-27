@@ -34,7 +34,7 @@ public class AnyLicenseInfoFactory extends TreeMap<ExtractedLicenseInfo,AnyLicen
         .comparing(ExtractedLicenseInfo::getLicenseId)
         .thenComparing(ExtractedLicenseInfo::getExtractedText);
 
-    @Inject private LicenseMap licenseMap = null;
+    /** @serial */ @Inject private LicenseMap licenseMap = null;
 
     /**
      * Sole constructor.

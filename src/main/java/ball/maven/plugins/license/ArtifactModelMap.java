@@ -37,9 +37,9 @@ public class ArtifactModelMap extends TreeMap<Artifact,Model> {
         .thenComparing(Artifact::getArtifactId)
         .thenComparing(Artifact::getVersion);
 
-    private final MavenSession session;
-    private final ProjectBuilder builder;
-    private final ModelReader reader;
+    /** @serial */ private final MavenSession session;
+    /** @serial */ private final ProjectBuilder builder;
+    /** @serial */ private final ModelReader reader;
 
     /**
      * Sole constructor.

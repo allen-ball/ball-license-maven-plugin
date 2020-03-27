@@ -58,8 +58,8 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
     private static final Pattern CANONICAL =
         Pattern.compile("<([^>]*)>; rel=\"canonical\"");
 
-    @Inject private LicenseMap licenseMap = null;
-    @Inject private AnyLicenseInfoFactory anyLicenseInfoFactory = null;
+    /** @serial */ @Inject private LicenseMap licenseMap = null;
+    /** @serial */ @Inject private AnyLicenseInfoFactory anyLicenseInfoFactory = null;
 
     @PostConstruct
     public void init() {

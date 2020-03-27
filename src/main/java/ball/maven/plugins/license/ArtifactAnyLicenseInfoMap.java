@@ -31,7 +31,8 @@ import static java.util.stream.Collectors.toMap;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 /**
- * {@link Artifact} to {@link License} {@link java.util.Map}
+ * {@link Artifact} to {@link AnyLicenseInfo}
+ * ({@link org.spdx.rdfparser.license.License}) {@link java.util.Map}
  * implementation.  The {@link #get(Object)} method transparently calculates
  * and caches any value.
  *
@@ -47,8 +48,8 @@ public class ArtifactAnyLicenseInfoMap
     private static final Pattern EXCLUDE =
         Pattern.compile("(?i)^.*[.]class$");
 
-    private final ArtifactModelMap artifactModelMap;
-    private final URLAnyLicenseInfoMap urlAnyLicenseInfoMap;
+    /** @serial */ private final ArtifactModelMap artifactModelMap;
+    /** @serial */ private final URLAnyLicenseInfoMap urlAnyLicenseInfoMap;
 
     /**
      * Sole constructor.
