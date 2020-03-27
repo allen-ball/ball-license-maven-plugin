@@ -28,7 +28,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
 import org.spdx.rdfparser.license.ExtractedLicenseInfo;
 import org.spdx.rdfparser.license.License;
-import org.spdx.rdfparser.license.SpdxNoneLicense;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.joining;
@@ -36,8 +35,6 @@ import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.LF;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
-import static org.spdx.compare.LicenseCompareHelper.matchingStandardLicenseIds;
-import static org.spdx.rdfparser.license.LicenseInfoFactory.parseSPDXLicenseString;
 
 /**
  * {@link URL} ({@link String} representation) to {@link AnyLicenseInfo}
@@ -62,6 +59,7 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
         Pattern.compile("<([^>]*)>; rel=\"canonical\"");
 
     @Inject private LicenseMap licenseMap = null;
+    @Inject private AnyLicenseInfoFactory anyLicenseInfoFactory = null;
 
     @PostConstruct
     public void init() {
@@ -104,24 +102,9 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
      *          {@link #get(Object)} otherwise.
      */
     public AnyLicenseInfo parse(String name, String url) {
-        AnyLicenseInfo value = null;
+        AnyLicenseInfo value = anyLicenseInfoFactory.get(name, null);
 
-        if (value == null) {
-            if (isNotBlank(name)) {
-                if (value == null) {
-                    value = licenseMap.get(name);
-                }
-
-                if (value == null) {
-                    try {
-                        value = (License) parseSPDXLicenseString(name);
-                    } catch (Exception exception) {
-                    }
-                }
-            }
-        }
-
-        if (value == null) {
+        if (value == null || value instanceof ExtractedLicenseInfo) {
             if (isNotBlank(url)) {
                 value = get(name, url);
             }
@@ -149,6 +132,7 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
 
     private AnyLicenseInfo compute(String name, String url) {
         AnyLicenseInfo value = null;
+        String text = null;
 
         try {
             URLConnection connection = new URL(url).openConnection();
@@ -160,48 +144,48 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
             String redirectURL = getRedirectURL(connection);
             String canonicalURL = getCanonicalURL(connection);
 
-            if (redirectURL != null) {
+            if (isNotBlank(redirectURL)) {
                 value = get(name, redirectURL);
             } else {
-                if (canonicalURL != null && (! canonicalURL.equals(url))) {
+                if (isNotBlank(canonicalURL) && (! canonicalURL.equals(url))) {
                     value = get(name, canonicalURL);
                 } else {
-                    String text = null;
-
                     try (InputStream in = connection.getInputStream()) {
                         text =
                             new BufferedReader(new InputStreamReader(in, UTF_8))
                             .lines()
                             .collect(joining(LF, EMPTY, LF));
-
-                        String[] ids = matchingStandardLicenseIds(text);
-
-                        value = parseSPDXLicenseString(ids[0]);
-                    } catch (FileNotFoundException exception) {
-                        log.warn("File not found: " + url);
-                    } catch (IOException exception) {
-                        log.warn("Cannot read " + url);
-                        log.debug(exception.getMessage(), exception);
-                    } catch (Exception exception) {
-                    }
-
-                    if (value == null) {
-                        if (isNotBlank(text)) {
-                            value =
-                                new ExtractedLicenseInfo(name, text, name,
-                                                         new String[] { url },
-                                                         null);
-                        }
                     }
                 }
             }
+        } catch (FileNotFoundException exception) {
+            log.warn("File not found: " + url);
         } catch (Exception exception) {
             log.warn("Cannot read " + url);
             log.debug(exception.getMessage(), exception);
+        } finally {
+            if (value == null) {
+                value =
+                    anyLicenseInfoFactory
+                    .get(isNotBlank(name) ? name : url, text);
+            }
+
+            if (value instanceof ExtractedLicenseInfo) {
+                log.warn("Cannot find SPDX license for"
+                         + (isNotBlank(name) ? (" '" + name + "'") : "")
+                         + (isNotBlank(url) ? (" @ " + url) : ""));
+            }
         }
 
-        if (value == null) {
-            value = new SpdxNoneLicense();
+        if (value instanceof ExtractedLicenseInfo) {
+            ExtractedLicenseInfo license = (ExtractedLicenseInfo) value;
+            String[] seeAlso = license.getSeeAlso();
+            Set<String> set =
+                Stream.of((seeAlso != null) ? seeAlso : new String[] { })
+                .collect(toSet());
+
+            set.add(url);
+            license.setSeeAlso(set.toArray(new String[] { }));
         }
 
         return value;

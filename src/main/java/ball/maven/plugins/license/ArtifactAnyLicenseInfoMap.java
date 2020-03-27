@@ -3,7 +3,6 @@ package ball.maven.plugins.license;
 import java.net.JarURLConnection;
 import java.net.URI;
 import java.net.URL;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,17 +20,13 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.model.Model;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
 import org.spdx.rdfparser.license.ExtractedLicenseInfo;
-import org.spdx.rdfparser.license.License;
 import org.spdx.rdfparser.license.SimpleLicensingInfo;
-import org.spdx.rdfparser.license.SpdxNoneLicense;
 
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
-import static org.spdx.rdfparser.license.LicenseInfoFactory.parseSPDXLicenseString;
 
 /**
  * {@link Artifact} to {@link License} {@link java.util.Map}
@@ -45,8 +40,10 @@ import static org.spdx.rdfparser.license.LicenseInfoFactory.parseSPDXLicenseStri
 @Slf4j
 public class ArtifactAnyLicenseInfoMap
              extends TreeMap<Artifact,List<AnyLicenseInfo>> {
-    private static final Pattern LICENSE =
+    private static final Pattern INCLUDE =
         Pattern.compile("(?i)^(.*/|)(LICENSE([.][^/]+)?|about.html)$");
+    private static final Pattern EXCLUDE =
+        Pattern.compile("(?i)^.*[.]class$");
 
     private final ArtifactModelMap artifactModelMap;
     private final URLAnyLicenseInfoMap urlAnyLicenseInfoMap;
@@ -89,7 +86,8 @@ public class ArtifactAnyLicenseInfoMap
             Stream.of(artifactModelMap.get(artifact).getLicenses())
             .filter(Objects::nonNull)
             .flatMap(List::stream)
-            .map(t -> urlAnyLicenseInfoMap.parse(t.getName(), t.getUrl()))
+            .map(t -> urlAnyLicenseInfoMap
+                      .parse(t.getName(), resolve(url, t.getUrl())))
             .collect(toList());
         Set<String> scan = scan(url);
 
@@ -113,22 +111,14 @@ public class ArtifactAnyLicenseInfoMap
                 scanned.values().stream().collect(toList());
 
             list.removeAll(specified);
-            list.removeIf(t -> (! (t instanceof License)));
+            list.removeIf(t -> (t instanceof ExtractedLicenseInfo));
 
             for (int i = 0, n = specified.size(); i < n; i += 1) {
                 if (! list.isEmpty()) {
-                    if (! (specified.get(i) instanceof License)) {
+                    if (specified.get(i) instanceof ExtractedLicenseInfo) {
                         specified.set(i, list.remove(0));
                     }
                 }
-            }
-        }
-
-        for (AnyLicenseInfo license : specified) {
-            if (! (license instanceof License)) {
-                log.warn("Could not find SPDX license for: " + license);
-                log.debug("    " + url);
-                log.debug("    " + scan);
             }
         }
 
@@ -176,7 +166,8 @@ public class ArtifactAnyLicenseInfoMap
 
             jar.stream()
                 .map(JarEntry::getName)
-                .filter(t -> LICENSE.matcher(t).matches())
+                .filter(t -> INCLUDE.matcher(t).matches())
+                .filter(t -> (! EXCLUDE.matcher(t).matches()))
                 .map(t -> resolve(url, t))
                 .forEach(t -> set.add(t));
         } catch (Exception exception) {

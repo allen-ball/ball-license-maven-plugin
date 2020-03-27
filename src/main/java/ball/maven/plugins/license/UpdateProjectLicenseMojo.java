@@ -2,7 +2,7 @@ package ball.maven.plugins.license;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
+/* import java.io.FileOutputStream; */
 import java.nio.file.Files;
 import java.util.Arrays;
 import javax.inject.Inject;
@@ -11,13 +11,16 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
-import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
+/* import org.apache.maven.model.io.xpp3.MavenXpp3Writer; */
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
+import org.spdx.rdfparser.license.AnyLicenseInfo;
+import org.spdx.rdfparser.license.ExtractedLicenseInfo;
 import org.spdx.rdfparser.license.License;
+import org.spdx.rdfparser.license.SimpleLicensingInfo;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.joining;
@@ -75,24 +78,27 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
         /*
          * Find the license from name and/or URL, ...
          */
-        License license = null;
+        AnyLicenseInfo license = null;
 
         if (license == null) {
             if (isNotBlank(name) || isNotBlank(url)) {
-                try {
-                    license = (License) urlAnyLicenseInfoMap.parse(name, url);
-                } catch (Exception exception) {
+                license = urlAnyLicenseInfoMap.parse(name, url);
+
+                if (license instanceof ExtractedLicenseInfo) {
                     log.warn("Cannot find SPDX license for"
-                             + (isNotBlank(name) ? (" " + name) : "")
-                             + (isNotBlank(url) ? (" " + url) : ""));
+                             + (isNotBlank(name) ? (" '" + name) : "'")
+                             + (isNotBlank(url) ? (" @ " + url) : ""));
                 }
             }
         }
 
         if (license != null) {
-            if (! license.getLicenseId().equals(name)) {
-                log.warn(SPDX_LICENSE_IDENTIFIER
-                         + ": " + license.getLicenseId());
+            if (license instanceof SimpleLicensingInfo) {
+                String id = ((SimpleLicensingInfo) license).getLicenseId();
+
+                if (id != null && (! id.equals(name))) {
+                    log.warn(SPDX_LICENSE_IDENTIFIER + ": " + id);
+                }
             }
         }
         /*
@@ -108,18 +114,19 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
          * fail if it is not), ...
          */
         if (verify) {
-            if (license != null) {
+            if (license instanceof License) {
                 try {
                     String text =
                         Files.lines(getFile().toPath(), UTF_8)
                         .collect(joining(LF, EMPTY, LF));
                     boolean isDifferenceFound =
-                        isTextStandardLicense(license, text)
+                        isTextStandardLicense((License) license, text)
                         .isDifferenceFound();
 
                     if (isDifferenceFound) {
                         fail(getFile() + " does not contain "
-                             + license.getLicenseId() + " license text");
+                             + ((License) license).getLicenseId()
+                             + " license text");
                     }
                 } catch (MojoFailureException exception) {
                     throw exception;
@@ -131,7 +138,7 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
         /*
          * ... update the project POM if necessary, ...
          */
-        if (license != null) {
+        if (license instanceof License) {
             File pom = project.getFile();
             Model model = null;
 
@@ -144,7 +151,7 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
             if (isBlank(model.getInceptionYear())
                 || (model.getLicenses() == null
                     || model.getLicenses().size() != 1)
-                || (! license.getLicenseId().equals(name))) {
+                || (! ((License) license).getLicenseId().equals(name))) {
                 /*
                  * org.apache.maven.model.License update =
                  *     project.getLicenses().get(0).clone();
