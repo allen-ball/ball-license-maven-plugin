@@ -161,7 +161,7 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
                 }
             }
         } catch (FileNotFoundException exception) {
-            log.warn("File not found: " + url);
+            log.debug("File not found: " + url);
         } catch (Exception exception) {
             log.warn("Cannot read " + url);
             log.debug(exception.getMessage(), exception);
@@ -170,12 +170,6 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
                 value =
                     anyLicenseInfoFactory
                     .get(isNotBlank(name) ? name : url, text);
-            }
-
-            if (value instanceof ExtractedLicenseInfo) {
-                log.warn("Cannot find SPDX license for"
-                         + (isNotBlank(name) ? (" '" + name + "'") : "")
-                         + (isNotBlank(url) ? (" @ " + url) : ""));
             }
         }
 

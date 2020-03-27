@@ -85,9 +85,20 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
                 license = urlAnyLicenseInfoMap.parse(name, url);
 
                 if (license instanceof ExtractedLicenseInfo) {
-                    log.warn("Cannot find SPDX license for"
-                             + (isNotBlank(name) ? (" '" + name) : "'")
-                             + (isNotBlank(url) ? (" @ " + url) : ""));
+                    String id =
+                        ((ExtractedLicenseInfo) license).getLicenseId();
+
+                    log.warn("Cannot find SPDX license"
+                             + (isNotBlank(id) ? (" for '" + id + "'") : ""));
+
+                    String[] seeAlso =
+                        ((ExtractedLicenseInfo) license).getSeeAlso();
+
+                    if (seeAlso != null) {
+                        for (String string : seeAlso) {
+                            log.warn("    " + string);
+                        }
+                    }
                 }
             }
         }

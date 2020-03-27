@@ -80,6 +80,10 @@ public class ArtifactModelMap extends TreeMap<Artifact,Model> {
     }
 
     private Model compute(Artifact artifact) {
+        File file =
+            new File(artifact.getFile().getParentFile(),
+                     artifact.getArtifactId()
+                     + "-" + artifact.getVersion() + ".pom");
         Model model =
             session.getProjects()
             .stream()
@@ -90,11 +94,6 @@ public class ArtifactModelMap extends TreeMap<Artifact,Model> {
 
         if (model == null) {
             try {
-                String name =
-                    artifact.getArtifactId()
-                    + "-" + artifact.getVersion() + ".pom";
-                File file = new File(artifact.getFile().getParentFile(), name);
-
                 model = reader.read(file, null);
 
                 if (model.getLicenses() == null || model.getLicenses().isEmpty()) {
@@ -109,7 +108,27 @@ public class ArtifactModelMap extends TreeMap<Artifact,Model> {
                         .getProject().getModel();
                 }
             } catch (Exception exception) {
-                log.warn("Cannot read POM for " + artifact);
+                log.debug("Cannot read POM for " + artifact);
+                log.debug(exception.getMessage(), exception);
+            }
+
+            if (model != null
+                && (model.getLicenses() == null
+                    || model.getLicenses().isEmpty())) {
+                try {
+                    ProjectBuildingRequest request =
+                        new DefaultProjectBuildingRequest(session.getProjectBuildingRequest())
+                        .setValidationLevel(VALIDATION_LEVEL_MINIMAL)
+                        .setResolveDependencies(false)
+                        .setProcessPlugins(false);
+
+                    model =
+                        builder.build(file, request)
+                        .getProject().getModel();
+                } catch (Exception exception) {
+                    log.debug("Cannot load POM for " + artifact);
+                    log.debug(exception.getMessage(), exception);
+                }
             }
         }
 

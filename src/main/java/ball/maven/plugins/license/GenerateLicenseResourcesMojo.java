@@ -30,6 +30,7 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
+import org.spdx.rdfparser.license.ExtractedLicenseInfo;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.nio.file.StandardOpenOption.CREATE;
@@ -38,6 +39,7 @@ import static java.nio.file.StandardOpenOption.WRITE;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.apache.maven.plugins.annotations.LifecyclePhase.GENERATE_RESOURCES;
@@ -142,6 +144,30 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                                         groupingBy(Tuple::getModel,
                                                    () -> new TreeMap<>(MODEL_ORDER),
                                                    toList())));
+                Set<ExtractedLicenseInfo> extracted =
+                    report.keySet().stream()
+                    .flatMap(List::stream)
+                    .filter(t -> (t instanceof ExtractedLicenseInfo))
+                    .map(t -> (ExtractedLicenseInfo) t)
+                    .collect(toSet());
+
+                if (! extracted.isEmpty()) {
+                    log.warn("Cannot find SPDX license(s)");
+
+                    for (ExtractedLicenseInfo license : extracted) {
+                        String id = license.getLicenseId();
+
+                        log.warn("    '" + license.getLicenseId() + "'");
+
+                        String[] seeAlso = license.getSeeAlso();
+
+                        if (seeAlso != null) {
+                            for (String string : seeAlso) {
+                                log.warn("        " + string);
+                            }
+                        }
+                    }
+                }
 
                 target = directory.toPath().resolve("DEPENDENCIES");
 
