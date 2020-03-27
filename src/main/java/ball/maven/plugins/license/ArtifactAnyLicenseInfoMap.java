@@ -15,6 +15,8 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
@@ -58,13 +60,21 @@ public class ArtifactAnyLicenseInfoMap
      */
     @Inject
     public ArtifactAnyLicenseInfoMap(ArtifactModelMap artifactModelMap,
-                                        URLAnyLicenseInfoMap urlAnyLicenseInfoMap) {
+                                     URLAnyLicenseInfoMap urlAnyLicenseInfoMap) {
         super(ArtifactModelMap.ORDER);
 
         this.artifactModelMap =
             Objects.requireNonNull(artifactModelMap);
         this.urlAnyLicenseInfoMap =
             Objects.requireNonNull(urlAnyLicenseInfoMap);
+    }
+
+    @PostConstruct
+    public void init() { }
+
+    @PreDestroy
+    public void destroy() {
+        log.debug(getClass().getSimpleName() + ".size() = " + size());
     }
 
     @Override

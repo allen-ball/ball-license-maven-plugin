@@ -1,10 +1,8 @@
 package ball.maven.plugins.license;
 
-import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
@@ -25,6 +23,8 @@ import javax.net.ssl.SSLSession;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
 import org.spdx.rdfparser.license.ExtractedLicenseInfo;
 import org.spdx.rdfparser.license.License;
@@ -141,21 +141,23 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
                 ((HttpsURLConnection) connection).setHostnameVerifier(NONE);
             }
 
-            String redirectURL = getRedirectURL(connection);
             String canonicalURL = getCanonicalURL(connection);
+
+            if (isNotBlank(canonicalURL) && (! canonicalURL.equals(url))) {
+                value = get(name, canonicalURL);
+            }
+
+            String redirectURL = getRedirectURL(connection);
 
             if (isNotBlank(redirectURL)) {
                 value = get(name, redirectURL);
-            } else {
-                if (isNotBlank(canonicalURL) && (! canonicalURL.equals(url))) {
-                    value = get(name, canonicalURL);
-                } else {
-                    try (InputStream in = connection.getInputStream()) {
-                        text =
-                            new BufferedReader(new InputStreamReader(in, UTF_8))
-                            .lines()
-                            .collect(joining(LF, EMPTY, LF));
-                    }
+            }
+
+            if (value == null) {
+                try (InputStream in = connection.getInputStream()) {
+                    Document document = Jsoup.parse(in, null, url);
+
+                    text = document.body().text();
                 }
             }
         } catch (FileNotFoundException exception) {
@@ -191,20 +193,6 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
         return value;
     }
 
-    private String getRedirectURL(URLConnection connection) throws IOException {
-        String url = null;
-
-        if (connection instanceof HttpURLConnection) {
-            int code = ((HttpURLConnection) connection).getResponseCode();
-
-            if (REDIRECT_CODES.contains(code)) {
-                url = connection.getHeaderField("Location");
-            }
-        }
-
-        return url;
-    }
-
     private String getCanonicalURL(URLConnection connection) {
         String url = null;
 
@@ -220,6 +208,20 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
                     .map(t -> URI.create(connection.getURL().toString())
                               .resolve(t).toASCIIString())
                     .findFirst().orElse(null);
+            }
+        }
+
+        return url;
+    }
+
+    private String getRedirectURL(URLConnection connection) throws IOException {
+        String url = null;
+
+        if (connection instanceof HttpURLConnection) {
+            int code = ((HttpURLConnection) connection).getResponseCode();
+
+            if (REDIRECT_CODES.contains(code)) {
+                url = connection.getHeaderField("Location");
             }
         }
 

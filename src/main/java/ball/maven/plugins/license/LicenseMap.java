@@ -74,7 +74,8 @@ public class LicenseMap extends TreeMap<String,License> {
 
                 value =
                     Stream.of(string,
-                              string.replaceAll("[\\p{Space}]", "-"))
+                              string.replaceAll("[\\p{Space}]", "-"),
+                              string.replaceAll("licence", "license"))
                     .map(t -> super.get(t))
                     .filter(Objects::nonNull)
                     .findFirst().orElse(null);
