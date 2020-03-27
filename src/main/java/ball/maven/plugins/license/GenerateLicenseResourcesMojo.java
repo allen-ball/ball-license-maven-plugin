@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -37,11 +38,14 @@ import static java.nio.file.StandardOpenOption.WRITE;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toList;
+import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.apache.maven.plugins.annotations.LifecyclePhase.GENERATE_RESOURCES;
 import static org.apache.maven.plugins.annotations.ResolutionScope.TEST;
 
 /**
- * {@link org.apache.maven.plugin.Mojo} to generate LICENSE resources.
+ * {@link org.apache.maven.plugin.Mojo} to generate LICENSE and DEPENDENCIES
+ * resources.
  *
  * {@maven.plugin.fields}
  *
@@ -65,14 +69,14 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
         .collect(toCollection(() -> new TreeSet<>(String.CASE_INSENSITIVE_ORDER)));
 
     private static final Comparator<List<AnyLicenseInfo>> LICENSES_ORDER =
-        Comparator.<List<AnyLicenseInfo>>
-        comparingInt(t -> t.size()).reversed()
-        .thenComparing(List::toString);
-    private static final Comparator<Row> REPORT_ORDER =
         Comparator
-        .comparing(Row::getLicenses, LICENSES_ORDER)
-        .thenComparing(t -> t.getArtifacts().get(0), ArtifactModelMap.ORDER);
-
+        .<List<AnyLicenseInfo>>comparingInt(List::size).reversed()
+        .thenComparing(List::toString);
+    private static final Comparator<? super Model> MODEL_ORDER =
+        Comparator
+        .<Model,String>comparing(t -> Objects.toString(t.getName(), ""))
+        .thenComparing(t -> Objects.toString(t.getUrl(), ""))
+        .thenComparingInt(t -> isBlank(t.getName()) ? Objects.hashCode(t) : 0);
     @Parameter(defaultValue = "${project.build.outputDirectory}",
                property = "license.resources.directory")
     private File directory = null;
@@ -94,21 +98,13 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
 
             if (ARCHIVE_PACKAGING.contains(packaging)) {
                 Set<String> scope = getScope();
-                Map<Artifact,List<Artifact>> map =
+                List<Tuple> list =
                     project.getArtifacts()
                     .stream()
                     .filter(t -> scope.contains(t.getScope()))
-                    .collect(groupingBy(t -> t,
-                                        () -> new TreeMap<>(ArtifactModelMap.ORDER),
-                                        toList()));
-                List<Row> list =
-                    map.values()
-                    .stream()
-                    .filter(t -> scope.contains(t.get(0).getScope()))
-                    .map(t -> new Row(t, artifactAnyLicenseInfoMap.get(t.get(0))))
+                    .map(t -> new Tuple(artifactAnyLicenseInfoMap.get(t),
+                                        artifactModelMap.get(t), t))
                     .collect(toList());
-
-                list.sort(REPORT_ORDER);
                 /*
                  * LICENSE
                  */
@@ -133,7 +129,20 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                                           Files.getLastModifiedTime(source));
                 /*
                  * DEPENDENCIES
+                 *
+                 * Report sort order:
+                 *      Licenses (LICENSES_ORDER)
+                 *      Model[name, url] (same if name is not blank)
+                 *      Artifacts (ArtifactModelMap.ORDER)
                  */
+                TreeMap<List<AnyLicenseInfo>,Map<Model,List<Tuple>>> report =
+                    list.stream()
+                    .collect(groupingBy(Tuple::getLicenses,
+                                        () -> new TreeMap<>(LICENSES_ORDER),
+                                        groupingBy(Tuple::getModel,
+                                                   () -> new TreeMap<>(MODEL_ORDER),
+                                                   toList())));
+
                 target = directory.toPath().resolve("DEPENDENCIES");
 
                 try (PrintWriter out =
@@ -143,34 +152,38 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                                                             TRUNCATE_EXISTING))) {
                     out.println(target.getFileName());
 
-                    String header = null;
+                    for (Map.Entry<List<AnyLicenseInfo>,
+                             Map<Model,List<Tuple>>> section :
+                             report.entrySet()) {
+                        boolean first =
+                            report.comparator()
+                            .compare(report.firstKey(), section.getKey()) == 0;
+                        boolean last =
+                            report.comparator()
+                            .compare(report.lastKey(), section.getKey()) == 0;
 
-                    for (Row row : list) {
-                        if (! row.getLicenses().toString().equals(header)) {
-                            if (header != null) {
-                                out.println();
-                            }
-
-                            header = row.getLicenses().toString();
+                        if (! first) {
                             out.println();
-                            out.println(header);
                         }
-
-                        List<Artifact> artifacts = row.getArtifacts();
-                        Model model = artifactModelMap.get(artifacts.get(0));
 
                         out.println();
+                        out.println(section.getKey());
 
-                        if (StringUtils.isNotBlank(model.getName())) {
-                            out.println(model.getName());
-                        }
+                        for (Map.Entry<Model,List<Tuple>> group :
+                                 section.getValue().entrySet()) {
+                            out.println();
 
-                        for (Artifact artifact : artifacts) {
-                            out.println(artifact);
-                        }
+                            if (isNotBlank(group.getKey().getName())) {
+                                out.println(group.getKey().getName());
+                            }
 
-                        if (StringUtils.isNotBlank(model.getUrl())) {
-                            out.println(model.getUrl());
+                            for (Tuple tuple : group.getValue()) {
+                                out.println(tuple.getArtifact());
+                            }
+
+                            if (isNotBlank(group.getKey().getUrl())) {
+                                out.println(group.getKey().getUrl());
+                            }
                         }
                     }
                 }
@@ -213,8 +226,9 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
     }
 
     @AllArgsConstructor @Getter @Setter @ToString
-    private class Row {
-        private List<Artifact> artifacts = null;
+    private class Tuple {
         private List<AnyLicenseInfo> licenses = null;
+        private Model model = null;
+        private Artifact artifact = null;
     }
 }
