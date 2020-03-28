@@ -2,10 +2,14 @@
 <!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
 <!-- $Id$ -->
 <properties>
+  <entry key="BSD-3-Clause">
+    http://www.jcraft.com/jsch/LICENSE.txt
+  </entry>
   <entry key="CDDL-1.0">
     https://glassfish.dev.java.net/public/CDDLv1.0.html
   </entry>
   <entry key="CDDL-1.1 OR GPL-2.0 WITH Classpath-exception-2.0">
+    https://github.com/javaee/activation/blob/master/LICENSE.txt
     https://oss.oracle.com/licenses/CDDL+GPL-1.1
   </entry>
   <entry key="GPL-2.0 WITH Classpath-exception-2.0">
