@@ -1,5 +1,6 @@
 package ball.maven.plugins.license;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Objects;
@@ -13,6 +14,7 @@ import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
 import org.spdx.rdfparser.license.ExtractedLicenseInfo;
 import org.spdx.rdfparser.license.SpdxNoneLicense;
@@ -37,24 +39,14 @@ public class AnyLicenseInfoFactory extends TreeMap<ExtractedLicenseInfo,AnyLicen
         .comparing(ExtractedLicenseInfo::getLicenseId)
         .thenComparing(ExtractedLicenseInfo::getExtractedText);
 
-    /** @serial */ private final LicenseMap licenseMap;
-
     /**
      * Sole constructor.
-     *
-     * @param   licenseMap      The injected {@link LicenseMap}.
      */
     @Inject
-    public AnyLicenseInfoFactory(LicenseMap licenseMap) {
+    public AnyLicenseInfoFactory() {
         super(COMPARATOR);
 
-        this.licenseMap = Objects.requireNonNull(licenseMap);
-
-        ExtractedLicenseInfo key = new ExtractedLicenseInfo(EMPTY, EMPTY);
-
-        key.setName(key.getLicenseId());
-
-        put(key, new SpdxNoneLicense());
+        put(key(EMPTY, EMPTY), new SpdxNoneLicense());
     }
 
     @PostConstruct
@@ -81,48 +73,56 @@ public class AnyLicenseInfoFactory extends TreeMap<ExtractedLicenseInfo,AnyLicen
         AnyLicenseInfo value = null;
 
         if (document != null) {
+/*
             value =
-                Stream.of(/* main, content, etc..., */ document.body())
-                .filter(Objects::nonNull)
+                Stream.of("#main .content", "main", "#main")
+                .flatMap(t -> document.body().select(t).stream())
                 .filter(Element::hasText)
-                .map(Element::text)
-                .map(t -> get(id, t))
-                .filter(t -> (! (t instanceof ExtractedLicenseInfo)))
-                .findFirst().orElse(get(id, document.text()));
+                .map(t -> key(id, t.wholeText()))
+                .filter(t -> computeIfAbsent(t, k -> compute(k)) != t)
+                .map(t -> get(t))
+                .findFirst().orElse(null);
+*/
+            if (value == null) {
+                value = computeIfAbsent(id, document.body().wholeText());
+            }
         } else {
-            value = get(id, (String) null);
+            value = computeIfAbsent(id, null);
         }
 
         return value;
     }
 
-    /**
-     * Method to get {@link AnyLicenseInfo} for an observed license ID and
-     * text.  The result is saved associated with the text and the same
-     * result will be returned for any subsequent call with the same text.
-     *
-     * @param   id              The observed license ID.
-     * @param   text            The observed license text.
-     *
-     * @return  An {@link AnyLicenseInfo}.  The return value is never
-     *          {@code null} and will at a minimum be an
-     *          {@link ExtractedLicenseInfo} including the parameters.
-     */
-    public AnyLicenseInfo get(String id, String text) {
+    private AnyLicenseInfo computeIfAbsent(String id, String text) {
+        return computeIfAbsent(key(id, text), k -> compute(k));
+    }
+
+    private AnyLicenseInfo compute(ExtractedLicenseInfo key) {
+        AnyLicenseInfo value = value(key);
+
+        return (value != null) ? value : key;
+    }
+
+    private ExtractedLicenseInfo key(String id, String text) {
         ExtractedLicenseInfo key =
             new ExtractedLicenseInfo(isNotBlank(id) ? id : EMPTY,
                                      isNotBlank(text) ? text : EMPTY);
 
-        key.setName(key.getLicenseId());
-
-        return computeIfAbsent(key, k -> compute(k));
-    }
-
-    private AnyLicenseInfo compute(ExtractedLicenseInfo key) {
         key.setExtractedText(key.getExtractedText().intern());
+        key.setName(key.getLicenseId());
         key.setSeeAlso(new String[] { });
 
-        AnyLicenseInfo value = licenseMap.get(key.getLicenseId());
+        return key;
+    }
+
+    private AnyLicenseInfo value(ExtractedLicenseInfo key) {
+        AnyLicenseInfo value =
+            entrySet().stream()
+            .filter(t -> isNotBlank(key.getExtractedText()))
+            .filter(t -> Objects.equals(t.getKey().getExtractedText(),
+                                        key.getExtractedText()))
+            .map(Map.Entry::getValue)
+            .findFirst().orElse(null);
 
         if (value == null) {
             try {
@@ -132,29 +132,12 @@ public class AnyLicenseInfoFactory extends TreeMap<ExtractedLicenseInfo,AnyLicen
         }
 
         if (value == null) {
-            AnyLicenseInfo previous =
-                entrySet().stream()
-                .filter(t -> isNotBlank(key.getExtractedText()))
-                .filter(t -> Objects.equals(t.getKey().getExtractedText(),
-                                            key.getExtractedText()))
-                .map(Map.Entry::getValue)
-                .findFirst().orElse(null);
+            try {
+                String[] ids =
+                    matchingStandardLicenseIds(key.getExtractedText());
 
-            if (previous == null) {
-                try {
-                    String[] ids =
-                        matchingStandardLicenseIds(key.getExtractedText());
-
-                    value = parseSPDXLicenseString(ids[0]);
-                } catch (Exception exception) {
-                    value = key;
-                }
-            } else {
-                if (! (previous instanceof ExtractedLicenseInfo)) {
-                    value = previous;
-                } else {
-                    value = key;
-                }
+                value = parseSPDXLicenseString(ids[0]);
+            } catch (Exception exception) {
             }
         }
 
