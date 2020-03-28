@@ -132,7 +132,6 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
                          properties.getProperty(id)
                          .split("(?s)[\\p{Space}]+")) {
                     if (isNotBlank(key)) {
-if (containsKey(key)) { log.debug("XML: " + key); }
                         if (! containsKey(key)) {
                             put(key, value);
                         }
