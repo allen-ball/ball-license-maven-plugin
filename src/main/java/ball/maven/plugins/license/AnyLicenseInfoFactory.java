@@ -4,12 +4,15 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
+import java.util.stream.Stream;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
 import org.spdx.rdfparser.license.ExtractedLicenseInfo;
 import org.spdx.rdfparser.license.SpdxNoneLicense;
@@ -60,6 +63,37 @@ public class AnyLicenseInfoFactory extends TreeMap<ExtractedLicenseInfo,AnyLicen
     @PreDestroy
     public void destroy() {
         log.debug(getClass().getSimpleName() + ".size() = " + size());
+    }
+
+    /**
+     * Method to get {@link AnyLicenseInfo} for an observed license ID and
+     * document.  The result is saved associated with the text and the same
+     * result will be returned for any subsequent call with the same text.
+     *
+     * @param   id              The observed license ID.
+     * @param   document        The observed license {@link Document}.
+     *
+     * @return  An {@link AnyLicenseInfo}.  The return value is never
+     *          {@code null} and will at a minimum be an
+     *          {@link ExtractedLicenseInfo} including the parameters.
+     */
+    public AnyLicenseInfo get(String id, Document document) {
+        AnyLicenseInfo value = null;
+
+        if (document != null) {
+            value =
+                Stream.of(/* main, content, etc..., */ document.body())
+                .filter(Objects::nonNull)
+                .filter(Element::hasText)
+                .map(Element::text)
+                .map(t -> get(id, t))
+                .filter(t -> (! (t instanceof ExtractedLicenseInfo)))
+                .findFirst().orElse(get(id, document.text()));
+        } else {
+            value = get(id, (String) null);
+        }
+
+        return value;
     }
 
     /**

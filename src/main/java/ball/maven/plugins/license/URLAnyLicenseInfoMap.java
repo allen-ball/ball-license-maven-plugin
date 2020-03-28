@@ -30,7 +30,6 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
 import org.spdx.rdfparser.license.ExtractedLicenseInfo;
 import org.spdx.rdfparser.license.License;
@@ -120,7 +119,8 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
             }
 
             for (String id : properties.stringPropertyNames()) {
-                AnyLicenseInfo value = anyLicenseInfoFactory.get(id, null);
+                AnyLicenseInfo value =
+                    anyLicenseInfoFactory.get(id, (String) null);
 
                 if (value instanceof ExtractedLicenseInfo) {
                     throw new IllegalArgumentException(id
@@ -167,7 +167,7 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
      *          {@link #get(Object)} otherwise.
      */
     public AnyLicenseInfo parse(String name, String url) {
-        AnyLicenseInfo value = anyLicenseInfoFactory.get(name, null);
+        AnyLicenseInfo value = anyLicenseInfoFactory.get(name, (String) null);
 
         if (value == null || value instanceof ExtractedLicenseInfo) {
             if (isNotBlank(url)) {
@@ -219,20 +219,9 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
             log.debug(exception.getMessage(), exception);
         } finally {
             if (value == null) {
-                String text = null;
-
-                if (document != null) {
-                    text =
-                        Stream.of(document.body())
-                        .filter(Objects::nonNull)
-                        .filter(Element::hasText)
-                        .map(Element::text)
-                        .findFirst().orElse(document.text());
-                }
-
                 value =
                     anyLicenseInfoFactory
-                    .get(isNotBlank(name) ? name : url, text);
+                    .get(isNotBlank(name) ? name : url, document);
             }
         }
 

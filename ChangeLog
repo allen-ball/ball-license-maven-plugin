@@ -1,7 +1,8 @@
 2020-03-27  Allen D. Ball  <ball@hcf.dev>
 
-	* src/main/java/ball/maven/plugins/license/URLAnyLicenseInfoMap.java:
-	Ensure redirect-URLs are entered into keys of the map.
+	* src/main/java/ball/maven/plugins/license/AnyLicenseInfoFactory.java,
+	src/main/java/ball/maven/plugins/license/URLAnyLicenseInfoMap.java:
+	Use org.jsoup.nodes.Document in mutual interface.
 
 	* Initial writing.
 
