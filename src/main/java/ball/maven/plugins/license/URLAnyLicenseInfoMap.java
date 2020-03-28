@@ -30,16 +30,15 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
 import org.spdx.rdfparser.license.ExtractedLicenseInfo;
 import org.spdx.rdfparser.license.License;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.apache.commons.lang3.StringUtils.LF;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
+import static org.spdx.rdfparser.license.LicenseInfoFactory.parseSPDXLicenseString;
 
 /**
  * {@link URL} ({@link String} representation) to {@link AnyLicenseInfo}
@@ -119,14 +118,7 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
             }
 
             for (String id : properties.stringPropertyNames()) {
-                AnyLicenseInfo value =
-                    anyLicenseInfoFactory.get(id, (String) null);
-
-                if (value instanceof ExtractedLicenseInfo) {
-                    throw new IllegalArgumentException(id
-                                                       + " is instance of "
-                                                       + value.getClass().getSimpleName());
-                }
+                AnyLicenseInfo value = parseSPDXLicenseString(id);
 
                 for (String key :
                          properties.getProperty(id)
@@ -167,12 +159,12 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
      *          {@link #get(Object)} otherwise.
      */
     public AnyLicenseInfo parse(String name, String url) {
-        AnyLicenseInfo value = anyLicenseInfoFactory.get(name, (String) null);
+        AnyLicenseInfo value = (name != null) ? licenseMap.get(name) : null;
 
-        if (value == null || value instanceof ExtractedLicenseInfo) {
-            if (isNotBlank(url)) {
-                value = computeIfAbsent(url, k -> compute(name, k));
-            }
+        if (isNotBlank(url)) {
+            value = computeIfAbsent(url, k -> compute(name, k));
+        } else {
+            value = anyLicenseInfoFactory.get(name, null);
         }
 
         return value;
@@ -210,6 +202,21 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
             if (value == null) {
                 try (InputStream in = connection.getInputStream()) {
                     document = Jsoup.parse(in, null, url);
+                    document.outputSettings()
+                        .syntax(Document.OutputSettings.Syntax.xml);
+                }
+
+                for (Element element :
+                         document.select("head>link[rel='canonical'][href]")) {
+                    String href = element.attr("abs:href");
+
+                    if (! href.equals(url)) {
+                        value = computeIfAbsent(href, k -> compute(name, k));
+                    }
+
+                    if (value != null) {
+                        break;
+                    }
                 }
             }
         } catch (FileNotFoundException exception) {
@@ -233,7 +240,6 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
                 .collect(toSet());
 
             set.add(url);
-
             license.setSeeAlso(set.toArray(new String[] { }));
         }
 

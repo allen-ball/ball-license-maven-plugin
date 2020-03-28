@@ -1,8 +1,10 @@
-2020-03-27  Allen D. Ball  <ball@hcf.dev>
+2020-03-28  Allen D. Ball  <ball@hcf.dev>
 
-	* src/main/java/ball/maven/plugins/license/AnyLicenseInfoFactory.java,
-	src/main/java/ball/maven/plugins/license/URLAnyLicenseInfoMap.java:
-	Use org.jsoup.nodes.Document in mutual interface.
+	* src/main/java/ball/maven/plugins/license/URLAnyLicenseInfoMap.java:
+	Check for "head>link[rel='canonical'][href]" and parse if
+	available.
+
+2020-03-27  Allen D. Ball  <ball@hcf.dev>
 
 	* Initial writing.
 
