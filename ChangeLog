@@ -1,4 +1,7 @@
 2020-03-27  Allen D. Ball  <ball@hcf.dev>
 
+	* src/main/java/ball/maven/plugins/license/URLAnyLicenseInfoMap.java:
+	Ensure redirect-URLs are entered into keys of the map.
+
 	* Initial writing.
 

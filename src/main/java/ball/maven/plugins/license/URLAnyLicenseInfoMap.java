@@ -1,5 +1,7 @@
 package ball.maven.plugins.license;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -8,6 +10,9 @@ import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Properties;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
@@ -25,6 +30,7 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
 import org.spdx.rdfparser.license.ExtractedLicenseInfo;
 import org.spdx.rdfparser.license.License;
@@ -45,7 +51,7 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
  * @version $Revision$
  */
 @Named @Singleton
-@NoArgsConstructor @Slf4j
+@Slf4j
 public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
     private static final HostnameVerifier NONE = new HostnameVerifierImpl();
 
@@ -58,32 +64,92 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
     private static final Pattern CANONICAL =
         Pattern.compile("<([^>]*)>; rel=\"canonical\"");
 
-    /** @serial */ @Inject private LicenseMap licenseMap = null;
-    /** @serial */ @Inject private AnyLicenseInfoFactory anyLicenseInfoFactory = null;
+    /** @serial */ private final LicenseMap licenseMap;
+    /** @serial */ private final AnyLicenseInfoFactory anyLicenseInfoFactory;
 
-    @PostConstruct
-    public void init() {
+    /**
+     * Sole constructor.
+     *
+     * @param   licenseMap      The injected {@link LicenseMap}.
+     * @param   anyLicenseInfoFactory
+     *                          The injected {@link AnyLicenseInfoFactory}.
+     */
+    @Inject
+    public URLAnyLicenseInfoMap(LicenseMap licenseMap,
+                                AnyLicenseInfoFactory anyLicenseInfoFactory) {
+        super();
+
+        this.licenseMap =
+            Objects.requireNonNull(licenseMap);
+        this.anyLicenseInfoFactory =
+            Objects.requireNonNull(anyLicenseInfoFactory);
+
         try {
             for (License value : licenseMap.values()) {
                 for (String key : value.getSeeAlso()) {
-                    if (! containsKey(key)) {
-                        put(key, value);
+                    put(key, value);
+                }
+            }
+
+            URL url =
+                getClass().getClassLoader()
+                .getResource("resources/licenses-full.json");
+            for (JsonNode node :
+                     new ObjectMapper().readTree(url).at("/licenses")) {
+                AnyLicenseInfo value =
+                    licenseMap.get(node.at("/identifiers/spdx[0]").asText());
+
+                if (value != null) {
+                    for (JsonNode uri : node.at("/uris")) {
+                        String key = uri.asText();
+
+                        if (! containsKey(key)) {
+                            put(key, value);
+                        }
                     }
                 }
             }
 
-            put("https://glassfish.dev.java.net/public/CDDLv1.0.html",
-                licenseMap.get("CDDL-1.0"));
-            put("https://www.mozilla.org/MPL/MPL-1.0.txt",
-                licenseMap.get("MPL-1.0"));
+            Properties properties = new Properties();
+            String name = getClass().getSimpleName() + ".xml";
+
+            try (InputStream in = getClass().getResourceAsStream(name)) {
+                if (in != null) {
+                    properties.loadFromXML(in);
+                }
+            }
+
+            for (String id : properties.stringPropertyNames()) {
+                AnyLicenseInfo value = anyLicenseInfoFactory.get(id, null);
+
+                if (value instanceof ExtractedLicenseInfo) {
+                    throw new IllegalArgumentException(id
+                                                       + " is instance of "
+                                                       + value.getClass().getSimpleName());
+                }
+
+                for (String key :
+                         properties.getProperty(id)
+                         .split("(?s)[\\p{Space}]+")) {
+                    if (isNotBlank(key)) {
+if (containsKey(key)) { log.debug("XML: " + key); }
+                        if (! containsKey(key)) {
+                            put(key, value);
+                        }
+                    }
+                }
+            }
             /*
              * FileNotFoundException heuristic:
              * www.mozilla.org -> www-archive.mozilla.org
              */
         } catch (Exception exception) {
-            throw new IllegalStateException(exception);
+            throw new ExceptionInInitializerError(exception);
         }
     }
+
+    @PostConstruct
+    public void init() { }
 
     @PreDestroy
     public void destroy() {
@@ -106,33 +172,16 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
 
         if (value == null || value instanceof ExtractedLicenseInfo) {
             if (isNotBlank(url)) {
-                value = get(name, url);
+                value = computeIfAbsent(url, k -> compute(name, k));
             }
         }
 
         return value;
     }
 
-    private AnyLicenseInfo get(String name, String url) {
-        AnyLicenseInfo value = super.get(url);
-
-        if (value == null) {
-            value = compute(name, url);
-
-            put(url, value);
-        }
-
-        return value;
-    }
-
-    @Override
-    public AnyLicenseInfo get(Object key) {
-        return get(null, key.toString());
-    }
-
     private AnyLicenseInfo compute(String name, String url) {
         AnyLicenseInfo value = null;
-        String text = null;
+        Document document = null;
 
         try {
             URLConnection connection = new URL(url).openConnection();
@@ -142,22 +191,26 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
             }
 
             String canonicalURL = getCanonicalURL(connection);
-
-            if (isNotBlank(canonicalURL) && (! canonicalURL.equals(url))) {
-                value = get(name, canonicalURL);
-            }
-
             String redirectURL = getRedirectURL(connection);
 
-            if (isNotBlank(redirectURL)) {
-                value = get(name, redirectURL);
+            if (isNotBlank(canonicalURL) && (! canonicalURL.equals(url))) {
+                if (value == null) {
+                    value = get(canonicalURL);
+                }
+            }
+
+            if (isNotBlank(redirectURL) && (! redirectURL.equals(url))) {
+                if (value != null) {
+                    put(redirectURL, value);
+                } else {
+                    value =
+                        computeIfAbsent(redirectURL, k -> compute(name, k));
+                }
             }
 
             if (value == null) {
                 try (InputStream in = connection.getInputStream()) {
-                    Document document = Jsoup.parse(in, null, url);
-
-                    text = document.body().text();
+                    document = Jsoup.parse(in, null, url);
                 }
             }
         } catch (FileNotFoundException exception) {
@@ -167,6 +220,17 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
             log.debug(exception.getMessage(), exception);
         } finally {
             if (value == null) {
+                String text = null;
+
+                if (document != null) {
+                    text =
+                        Stream.of(document.body())
+                        .filter(Objects::nonNull)
+                        .filter(Element::hasText)
+                        .map(Element::text)
+                        .findFirst().orElse(document.text());
+                }
+
                 value =
                     anyLicenseInfoFactory
                     .get(isNotBlank(name) ? name : url, text);
@@ -181,6 +245,7 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
                 .collect(toSet());
 
             set.add(url);
+
             license.setSeeAlso(set.toArray(new String[] { }));
         }
 
@@ -215,7 +280,13 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
             int code = ((HttpURLConnection) connection).getResponseCode();
 
             if (REDIRECT_CODES.contains(code)) {
-                url = connection.getHeaderField("Location");
+                String location = connection.getHeaderField("Location");
+
+                if (isNotBlank(location)) {
+                    url =
+                        URI.create(connection.getURL().toString())
+                        .resolve(location).toASCIIString();
+                }
             }
         }
 

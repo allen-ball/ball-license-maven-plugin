@@ -8,10 +8,12 @@ import java.util.TreeMap;
 import java.util.stream.Stream;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 import org.spdx.rdfparser.license.License;
+import org.spdx.rdfparser.license.ListedExceptions;
 import org.spdx.rdfparser.license.ListedLicenses;
 
 /**
@@ -27,16 +29,22 @@ import org.spdx.rdfparser.license.ListedLicenses;
 public class LicenseMap extends TreeMap<String,License> {
     private static final ListedLicenses LICENSES =
         ListedLicenses.getListedLicenses();
+    private static final ListedExceptions EXCEPTIONS =
+        ListedExceptions.getListedExceptions();
 
     /**
      * Sole constructor.
      */
+    @Inject
     public LicenseMap() {
         super(String.CASE_INSENSITIVE_ORDER);
 
         try {
             for (String key : LICENSES.getSpdxListedLicenseIds()) {
-                put(key, LICENSES.getListedLicenseById(key));
+                License license = LICENSES.getListedLicenseById(key);
+
+                put(key, license);
+                put(license.getName(), license);
             }
 
             URL url =
@@ -44,11 +52,13 @@ public class LicenseMap extends TreeMap<String,License> {
                 .getResource("resources/licenses-full.json");
             for (JsonNode node :
                      new ObjectMapper().readTree(url).at("/licenses")) {
-                String id = node.at("/id").asText();
                 String spdx = node.at("/identifiers/spdx[0]").asText();
+                String id = node.at("/id").asText();
+                String name = node.at("/name").asText();
 
                 if (containsKey(spdx)) {
                     put(id, get(spdx));
+                    put(name, get(spdx));
                 }
             }
         } catch (Exception exception) {

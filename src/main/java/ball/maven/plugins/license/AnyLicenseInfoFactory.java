@@ -34,13 +34,18 @@ public class AnyLicenseInfoFactory extends TreeMap<ExtractedLicenseInfo,AnyLicen
         .comparing(ExtractedLicenseInfo::getLicenseId)
         .thenComparing(ExtractedLicenseInfo::getExtractedText);
 
-    /** @serial */ @Inject private LicenseMap licenseMap = null;
+    /** @serial */ private final LicenseMap licenseMap;
 
     /**
      * Sole constructor.
+     *
+     * @param   licenseMap      The injected {@link LicenseMap}.
      */
-    public AnyLicenseInfoFactory() {
+    @Inject
+    public AnyLicenseInfoFactory(LicenseMap licenseMap) {
         super(COMPARATOR);
+
+        this.licenseMap = Objects.requireNonNull(licenseMap);
 
         ExtractedLicenseInfo key = new ExtractedLicenseInfo(EMPTY, EMPTY);
 
@@ -57,6 +62,18 @@ public class AnyLicenseInfoFactory extends TreeMap<ExtractedLicenseInfo,AnyLicen
         log.debug(getClass().getSimpleName() + ".size() = " + size());
     }
 
+    /**
+     * Method to get {@link AnyLicenseInfo} for an observed license ID and
+     * text.  The result is saved associated with the text and the same
+     * result will be returned for any subsequent call with the same text.
+     *
+     * @param   id              The observed license ID.
+     * @param   text            The observed license text.
+     *
+     * @return  An {@link AnyLicenseInfo}.  The return value is never
+     *          {@code null} and will at a minimum be an
+     *          {@link ExtractedLicenseInfo} including the parameters.
+     */
     public AnyLicenseInfo get(String id, String text) {
         ExtractedLicenseInfo key =
             new ExtractedLicenseInfo(isNotBlank(id) ? id : EMPTY,

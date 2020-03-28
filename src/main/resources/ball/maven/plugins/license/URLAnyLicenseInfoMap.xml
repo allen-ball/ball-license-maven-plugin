@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<!-- $Id -->
+<properties>
+  <entry key="CDDL-1.0">
+    https://glassfish.dev.java.net/public/CDDLv1.0.html
+  </entry>
+  <entry key="CDDL-1.1 OR GPL-2.0 WITH Classpath-exception-2.0">
+    https://oss.oracle.com/licenses/CDDL+GPL-1.1
+  </entry>
+  <entry key="GPL-2.0 WITH Classpath-exception-2.0">
+    http://www.gnu.org/software/classpath/license.html
+  </entry>
+  <entry key="MPL-1.0">
+    https://www.mozilla.org/MPL/MPL-1.0.txt
+  </entry>
+  <entry key="W3C">
+    http://www.w3.org/TR/2004/REC-DOM-Level-3-Core-20040407/java-binding.zip
+  </entry>
+</properties>
