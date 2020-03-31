@@ -13,7 +13,7 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 import org.spdx.rdfparser.license.License;
-import org.spdx.rdfparser.license.ListedExceptions;
+/* import org.spdx.rdfparser.license.ListedExceptions; */
 import org.spdx.rdfparser.license.ListedLicenses;
 
 /**
@@ -29,9 +29,10 @@ import org.spdx.rdfparser.license.ListedLicenses;
 public class LicenseMap extends TreeMap<String,License> {
     private static final ListedLicenses LICENSES =
         ListedLicenses.getListedLicenses();
-    private static final ListedExceptions EXCEPTIONS =
-        ListedExceptions.getListedExceptions();
-
+    /*
+     * private static final ListedExceptions EXCEPTIONS =
+     *     ListedExceptions.getListedExceptions();
+     */
     /**
      * Sole constructor.
      */
@@ -44,7 +45,7 @@ public class LicenseMap extends TreeMap<String,License> {
                 License license = LICENSES.getListedLicenseById(key);
 
                 put(key, license);
-                put(license.getName(), license);
+                putIfAbsent(license.getName(), license);
             }
 
             URL url =
@@ -57,8 +58,8 @@ public class LicenseMap extends TreeMap<String,License> {
                 String name = node.at("/name").asText();
 
                 if (containsKey(spdx)) {
-                    put(id, get(spdx));
-                    put(name, get(spdx));
+                    putIfAbsent(id, get(spdx));
+                    putIfAbsent(name, get(spdx));
                 }
             }
         } catch (Exception exception) {
