@@ -25,7 +25,7 @@ public class Walker<T> extends AbstractSpliterator<T> {
     private Spliterator<T> spliterator = null;
 
     private Walker(T node, Function<? super T,T[]> childrenOf) {
-        super(Long.MAX_VALUE, Spliterator.IMMUTABLE | Spliterator.NONNULL);
+        super(Long.MAX_VALUE, IMMUTABLE | NONNULL);
 
         stream =
             Stream.of(node)
