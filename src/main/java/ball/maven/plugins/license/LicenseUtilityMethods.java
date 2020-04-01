@@ -1,10 +1,14 @@
 package ball.maven.plugins.license;
 
 import java.util.stream.Stream;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
 import org.spdx.rdfparser.license.LicenseSet;
 import org.spdx.rdfparser.license.OrLaterOperator;
 import org.spdx.rdfparser.license.WithExceptionOperator;
+
+import static lombok.AccessLevel.PRIVATE;
 
 /**
  * {@link AnyLicenseInfo} utility methods.
@@ -12,6 +16,7 @@ import org.spdx.rdfparser.license.WithExceptionOperator;
  * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
  * @version $Revision$
  */
+@NoArgsConstructor(access = PRIVATE) @ToString
 public abstract class LicenseUtilityMethods {
 
     /**
