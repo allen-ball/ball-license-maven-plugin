@@ -3,8 +3,9 @@ package ball.maven.plugins.license;
 import java.io.File;
 import java.io.FileInputStream;
 /* import java.io.FileOutputStream; */
-import java.nio.file.Files;
-import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Stream;
 import javax.inject.Inject;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
@@ -17,17 +18,13 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
-import org.spdx.rdfparser.license.ExtractedLicenseInfo;
 import org.spdx.rdfparser.license.License;
-import org.spdx.rdfparser.license.SimpleLicensingInfo;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.stream.Collectors.joining;
-import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.apache.commons.lang3.StringUtils.LF;
+import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.apache.maven.plugins.annotations.LifecyclePhase.INITIALIZE;
 import static org.spdx.compare.LicenseCompareHelper.isTextStandardLicense;
 
@@ -67,8 +64,8 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
     private boolean verify = true;
 
     @Inject private MavenProject project = null;
-    @Inject private ArtifactAnyLicenseInfoMap artifactAnyLicenseInfoMap = null;
-    @Inject private URLAnyLicenseInfoMap urlAnyLicenseInfoMap = null;
+    @Inject private ArtifactLicenseMap map = null;
+    @Inject private LicenseResolver resolver;
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
@@ -81,35 +78,29 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
         AnyLicenseInfo license = null;
 
         if (license == null) {
-            if (isNotBlank(name) || isNotBlank(url)) {
-                license = urlAnyLicenseInfoMap.parse(name, url);
+            List<AnyLicenseInfo> list =
+                Stream.of(project.getLicenses())
+                .filter(Objects::nonNull)
+                .flatMap(List::stream)
+                .map(t -> new URLLicenseInfo(t.getName(), t.getUrl()))
+                .map(t -> resolver.parse(t))
+                .collect(toList());
 
-                if (license instanceof ExtractedLicenseInfo) {
-                    String id =
-                        ((ExtractedLicenseInfo) license).getLicenseId();
+            license = resolver.toLicense(list);
 
-                    log.warn("Cannot find SPDX license"
-                             + (isNotBlank(id) ? (" for '" + id + "'") : ""));
-
-                    String[] seeAlso =
-                        ((ExtractedLicenseInfo) license).getSeeAlso();
-
-                    if (seeAlso != null) {
-                        for (String string : seeAlso) {
-                            log.warn("    " + string);
-                        }
-                    }
-                }
+            if (! resolver.isFullySpdxListed(license)) {
+                warnIfExtractedLicenseInfo(Stream.of(license));
             }
         }
 
         if (license != null) {
-            if (license instanceof SimpleLicensingInfo) {
-                String id = ((SimpleLicensingInfo) license).getLicenseId();
+            if (resolver.isFullySpdxListed(license)) {
+                String id = license.toString();
 
                 if (id != null && (! id.equals(name))) {
                     log.warn(SPDX_LICENSE_IDENTIFIER + ": " + id);
                 }
+            } else {
             }
         }
         /*
@@ -125,24 +116,32 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
          * fail if it is not), ...
          */
         if (verify) {
-            if (license instanceof License) {
-                try {
-                    String text =
-                        Files.lines(getFile().toPath(), UTF_8)
-                        .collect(joining(LF, EMPTY, LF));
-                    boolean isDifferenceFound =
-                        isTextStandardLicense((License) license, text)
-                        .isDifferenceFound();
+            if (resolver.isFullySpdxListed(license)) {
+                /*
+                 * TBD: Bad assumption.
+                 */
+                if (license instanceof License) {
+                    try {
+                        Document document = Jsoup.parse(getFile(), null);
 
-                    if (isDifferenceFound) {
-                        fail(getFile() + " does not contain "
-                             + ((License) license).getLicenseId()
-                             + " license text");
+                        document.outputSettings()
+                            .syntax(Document.OutputSettings.Syntax.xml);
+
+                        boolean isDifferenceFound =
+                            isTextStandardLicense((License) license,
+                                                  document.body().text())
+                            .isDifferenceFound();
+
+                        if (isDifferenceFound) {
+                            fail(getFile() + " does not contain "
+                                 + ((License) license).getLicenseId()
+                                 + " license text");
+                        }
+                    } catch (MojoFailureException exception) {
+                        throw exception;
+                    } catch (Exception exception) {
+                        fail("Cannot analyze " + getFile(), exception);
                     }
-                } catch (MojoFailureException exception) {
-                    throw exception;
-                } catch (Exception exception) {
-                    fail("Cannot analyze " + getFile(), exception);
                 }
             }
         }
@@ -188,8 +187,7 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
          * ... and cache the result.
          */
         if (license != null) {
-            artifactAnyLicenseInfoMap
-                .put(project.getArtifact(), Arrays.asList(license));
+            map.put(project.getArtifact(), license);
         }
     }
 }

@@ -12,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.FileTime;
+import java.util.Set;
 import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -21,8 +22,11 @@ import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.spdx.rdfparser.license.AnyLicenseInfo;
+import org.spdx.rdfparser.license.ExtractedLicenseInfo;
 
 import static lombok.AccessLevel.PROTECTED;
+import static java.util.stream.Collectors.toSet;
 
 /**
  * Abstract base class for license {@link org.apache.maven.plugin.Mojo}s.
@@ -36,6 +40,33 @@ public abstract class AbstractLicenseMojo extends AbstractMojo {
                property = "license.file", readonly = true)
     @Getter
     private File file = null;
+
+    protected void warnIfExtractedLicenseInfo(Stream<AnyLicenseInfo> stream) {
+        Set<ExtractedLicenseInfo> extracted =
+            stream
+            .flatMap(t -> LicenseUtilityMethods.walk(t))
+            .filter(t -> (t instanceof ExtractedLicenseInfo))
+            .map(t -> (ExtractedLicenseInfo) t)
+            .collect(toSet());
+
+        if (! extracted.isEmpty()) {
+            log.warn("Cannot find SPDX license(s)");
+
+            for (ExtractedLicenseInfo license : extracted) {
+                String id = license.getLicenseId();
+
+                log.warn("    '" + license.getLicenseId() + "'");
+
+                String[] seeAlso = license.getSeeAlso();
+
+                if (seeAlso != null) {
+                    for (String string : seeAlso) {
+                        log.warn("        " + string);
+                    }
+                }
+            }
+        }
+    }
 
     /**
      * Method to copy from {@link URL} ({@link String} representation) to

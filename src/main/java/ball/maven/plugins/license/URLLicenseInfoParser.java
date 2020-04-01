@@ -10,7 +10,6 @@ import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
@@ -36,7 +35,6 @@ import org.spdx.rdfparser.license.ExtractedLicenseInfo;
 import org.spdx.rdfparser.license.License;
 
 import static java.util.stream.Collectors.toSet;
-import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.spdx.rdfparser.license.LicenseInfoFactory.parseSPDXLicenseString;
 
@@ -50,7 +48,7 @@ import static org.spdx.rdfparser.license.LicenseInfoFactory.parseSPDXLicenseStri
  */
 @Named @Singleton
 @Slf4j
-public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
+public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
     private static final HostnameVerifier NONE = new HostnameVerifierImpl();
 
     private static final Set<Integer> REDIRECT_CODES =
@@ -62,28 +60,25 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
     private static final Pattern CANONICAL =
         Pattern.compile("<([^>]*)>; rel=\"canonical\"");
 
-    /** @serial */ private final LicenseMap licenseMap;
-    /** @serial */ private final AnyLicenseInfoFactory anyLicenseInfoFactory;
+    /** @serial */ private final LicenseMap map;
+    /** @serial */ private final TextLicenseInfoParser parser;
 
     /**
      * Sole constructor.
      *
-     * @param   licenseMap      The injected {@link LicenseMap}.
-     * @param   anyLicenseInfoFactory
-     *                          The injected {@link AnyLicenseInfoFactory}.
+     * @param   map             The injected {@link LicenseMap}.
+     * @param   parser          The injected {@link TextLicenseInfoParser}.
      */
     @Inject
-    public URLAnyLicenseInfoMap(LicenseMap licenseMap,
-                                AnyLicenseInfoFactory anyLicenseInfoFactory) {
+    public URLLicenseInfoParser(LicenseMap map,
+                                TextLicenseInfoParser parser) {
         super();
 
-        this.licenseMap =
-            Objects.requireNonNull(licenseMap);
-        this.anyLicenseInfoFactory =
-            Objects.requireNonNull(anyLicenseInfoFactory);
+        this.map = Objects.requireNonNull(map);
+        this.parser = Objects.requireNonNull(parser);
 
         try {
-            for (License value : licenseMap.values()) {
+            for (License value : map.values()) {
                 for (String key : value.getSeeAlso()) {
                     put(key, value);
                 }
@@ -95,7 +90,7 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
             for (JsonNode node :
                      new ObjectMapper().readTree(url).at("/licenses")) {
                 AnyLicenseInfo value =
-                    licenseMap.get(node.at("/identifiers/spdx[0]").asText());
+                    map.get(node.at("/identifiers/spdx[0]").asText());
 
                 if (value != null) {
                     for (JsonNode uri : node.at("/uris")) {
@@ -112,9 +107,7 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
             String name = getClass().getSimpleName() + ".xml";
 
             try (InputStream in = getClass().getResourceAsStream(name)) {
-                if (in != null) {
-                    properties.loadFromXML(in);
-                }
+                properties.loadFromXML(in);
             }
 
             for (String id : properties.stringPropertyNames()) {
@@ -148,31 +141,36 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
     }
 
     /**
-     * Entry-point that first attempts to parse {@code name} as an SPDX
-     * license ID and, if that fails, continues to analyze the document at
-     * {@code url}.
+     * Entry-point that first attempts to parse the specified license ID as
+     * an SPDX license ID and, if that fails, continues to analyze the
+     * document at specified URL.
      *
-     * @param   name            The observed name of the license.
-     * @param   url             The {@code URL} of the license document.
+     * @param   resolver        The {@link LicenseResolver}.
+     * @param   key             The {@link URLLicenseInfo}.
      *
-     * @return  {@link License} if {@code name} can be parsed; the result of
-     *          {@link #get(Object)} otherwise.
+     * @return  {@link AnyLicenseInfo} reppresenting the results of the
+     *          parse (may be {@code key}).
      */
-    public AnyLicenseInfo parse(String name, String url) {
-        AnyLicenseInfo value = (name != null) ? licenseMap.get(name) : null;
+    public AnyLicenseInfo parse(LicenseResolver resolver, URLLicenseInfo key) {
+        String name = key.getLicenseId();
+        AnyLicenseInfo value = isNotBlank(name) ? map.get(name) : null;
 
-        if (isNotBlank(url)) {
-            value = computeIfAbsent(url, k -> compute(name, k));
-        } else {
-            value = anyLicenseInfoFactory.get(name, null);
+        if (value == null) {
+            Set<AnyLicenseInfo> set =
+                Stream.of(key.getSeeAlso())
+                .map(t -> computeIfAbsent(t, k -> compute(resolver, k)))
+                .collect(toSet());
+
+            if (! set.isEmpty()) {
+                value = resolver.toLicense(set);
+            }
         }
 
-        return value;
+        return (value != null) ? value : key;
     }
 
-    private AnyLicenseInfo compute(String name, String url) {
+    private AnyLicenseInfo compute(LicenseResolver resolver, String url) {
         AnyLicenseInfo value = null;
-        Document document = null;
 
         try {
             URLConnection connection = new URL(url).openConnection();
@@ -195,11 +193,14 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
                     put(redirectURL, value);
                 } else {
                     value =
-                        computeIfAbsent(redirectURL, k -> compute(name, k));
+                        computeIfAbsent(redirectURL,
+                                        k -> compute(resolver, k));
                 }
             }
 
             if (value == null) {
+                Document document = null;
+
                 try (InputStream in = connection.getInputStream()) {
                     document = Jsoup.parse(in, null, url);
                     document.outputSettings()
@@ -210,37 +211,28 @@ public class URLAnyLicenseInfoMap extends TreeMap<String,AnyLicenseInfo> {
                          document.select("head>link[rel='canonical'][href]")) {
                     String href = element.attr("abs:href");
 
-                    if (! href.equals(url)) {
-                        value = computeIfAbsent(href, k -> compute(name, k));
+                    if (isNotBlank(href) && (! href.equals(url))) {
+                        value = get(href);
                     }
 
                     if (value != null) {
                         break;
                     }
                 }
+
+                if (value == null) {
+                    value = parser.parse(resolver, url, document);
+                }
             }
         } catch (FileNotFoundException exception) {
             log.debug("File not found: " + url);
         } catch (Exception exception) {
             log.warn("Cannot read " + url);
-            log.debug(exception.getMessage(), exception);
-        } finally {
-            if (value == null) {
-                value =
-                    anyLicenseInfoFactory
-                    .get(isNotBlank(name) ? name : url, document);
-            }
+            log.debug(exception.getMessage());
         }
 
         if (value instanceof ExtractedLicenseInfo) {
-            ExtractedLicenseInfo license = (ExtractedLicenseInfo) value;
-            String[] seeAlso = license.getSeeAlso();
-            Set<String> set =
-                Stream.of((seeAlso != null) ? seeAlso : new String[] { })
-                .collect(toSet());
-
-            set.add(url);
-            license.setSeeAlso(set.toArray(new String[] { }));
+            TextLicenseInfo.addSeeAlso((ExtractedLicenseInfo) value, url);
         }
 
         return value;

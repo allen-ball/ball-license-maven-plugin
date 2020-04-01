@@ -90,6 +90,19 @@ public abstract class LicenseUtilityMethods {
     }
 
     /**
+     * Method to determine if an {@link AnyLicenseInfo} is "empty" (defined
+     * as the license consists solely of empty containers).
+     *
+     * @param   license         The {@link AnyLicenseInfo}.
+     *
+     * @return  {@code true} if the {@code license} is empty; {@code false}
+     *          otherwise.
+     */
+    public static boolean isEmpty(AnyLicenseInfo license) {
+        return countOf(license) == 0;
+    }
+
+    /**
      * Static method to test if an {@link AnyLicenseInfo} is a branch.
      *
      * @param   node            The {@link AnyLicenseInfo}.

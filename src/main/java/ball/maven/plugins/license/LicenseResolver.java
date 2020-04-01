@@ -1,12 +1,7 @@
 package ball.maven.plugins.license;
 
 import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Stream;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.inject.Inject;
@@ -14,17 +9,9 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
-import org.spdx.rdfparser.license.ConjunctiveLicenseSet;
 import org.spdx.rdfparser.license.DisjunctiveLicenseSet;
 import org.spdx.rdfparser.license.ExtractedLicenseInfo;
 import org.spdx.rdfparser.license.License;
-import org.spdx.rdfparser.license.LicenseSet;
-import org.spdx.rdfparser.license.OrLaterOperator;
-import org.spdx.rdfparser.license.SpdxListedLicense;
-import org.spdx.rdfparser.license.WithExceptionOperator;
-
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toSet;
 
 /**
  * {@link AnyLicenseInfo} resolver with methods to parse, look-up, and
@@ -74,17 +61,41 @@ public class LicenseResolver {
      * @param   in            The {@link AnyLicenseInfo} to resolve.
      *
      * @return  Parsed {@link AnyLicenseInfo}.
+     *
      */
     public AnyLicenseInfo parse(AnyLicenseInfo in) {
         AnyLicenseInfo out = in;
 
         if (in instanceof URLLicenseInfo) {
-            out = urlLicenseInfoParser.parse(this, (URLLicenseInfo) in);
+            out = parse((URLLicenseInfo) in);
         } else if (in instanceof ExtractedLicenseInfo) {
-            out = textLicenseInfoParser.parse(this, (ExtractedLicenseInfo) in);
+            out = parse((ExtractedLicenseInfo) in);
         }
 
         return out;
+    }
+
+    /**
+     * Method to parse {@link ExtractedLicenseInfo}
+     * ({@link TextLicenseInfo}) instances.
+     *
+     * @param   in            The {@link ExtractedLicenseInfo} to resolve.
+     *
+     * @return  Parsed {@link AnyLicenseInfo}.
+     */
+    public AnyLicenseInfo parse(ExtractedLicenseInfo in) {
+        return textLicenseInfoParser.parse(this, in);
+    }
+
+    /**
+     * Method to parse {@link URLLicenseInfo} instances.
+     *
+     * @param   in            The {@link URLLicenseInfo} to resolve.
+     *
+     * @return  Parsed {@link AnyLicenseInfo}.
+     */
+    public AnyLicenseInfo parse(URLLicenseInfo in) {
+        return urlLicenseInfoParser.parse(this, in);
     }
 
     /**

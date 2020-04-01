@@ -8,8 +8,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -18,7 +18,6 @@ import javax.inject.Inject;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -30,7 +29,8 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
-import org.spdx.rdfparser.license.ExtractedLicenseInfo;
+import org.spdx.rdfparser.license.OrLaterOperator;
+import org.spdx.rdfparser.license.WithExceptionOperator;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.nio.file.StandardOpenOption.CREATE;
@@ -39,7 +39,7 @@ import static java.nio.file.StandardOpenOption.WRITE;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toSet;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.apache.maven.plugins.annotations.LifecyclePhase.GENERATE_RESOURCES;
@@ -64,20 +64,23 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
     private static final String SYSTEM = "system";
     private static final String TEST = "test";
     private static final String INCLUDE_SCOPE = COMPILE + "," + RUNTIME;
-    private static final String EXCLUDE_SCOPE = "";
+    private static final String EXCLUDE_SCOPE = EMPTY;
 
     private static final TreeSet<String> ARCHIVE_PACKAGING =
         Stream.of("jar", "maven-plugin", "ejb", "war", "ear", "rar")
         .collect(toCollection(() -> new TreeSet<>(String.CASE_INSENSITIVE_ORDER)));
 
-    private static final Comparator<List<AnyLicenseInfo>> LICENSES_ORDER =
+    private static final Comparator<AnyLicenseInfo> LICENSE_ORDER =
         Comparator
-        .<List<AnyLicenseInfo>>comparingInt(List::size).reversed()
-        .thenComparing(List::toString);
-    private static final Comparator<? super Model> MODEL_ORDER =
+        .<AnyLicenseInfo>comparingInt(t -> LicenseUtilityMethods.countOf(t))
+        .reversed()
+        .thenComparing(t -> Objects.toString(t, EMPTY))
+        .thenComparingInt(t -> (t instanceof OrLaterOperator) ? -1 : 1)
+        .thenComparingInt(t -> (t instanceof WithExceptionOperator) ? -1 : 1);
+    private static final Comparator<Model> MODEL_ORDER =
         Comparator
-        .<Model,String>comparing(t -> Objects.toString(t.getName(), ""))
-        .thenComparing(t -> Objects.toString(t.getUrl(), ""))
+        .<Model,String>comparing(t -> Objects.toString(t.getName(), EMPTY))
+        .thenComparing(t -> Objects.toString(t.getUrl(), EMPTY))
         .thenComparingInt(t -> isBlank(t.getName()) ? Objects.hashCode(t) : 0);
     @Parameter(defaultValue = "${project.build.outputDirectory}",
                property = "license.resources.directory")
@@ -90,7 +93,7 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
     private String excludeScope = EXCLUDE_SCOPE;
 
     @Inject private MavenProject project = null;
-    @Inject private ArtifactAnyLicenseInfoMap artifactAnyLicenseInfoMap = null;
+    @Inject private ArtifactLicenseMap artifactLicenseMap = null;
     @Inject private ArtifactModelMap artifactModelMap = null;
 
     @Override
@@ -104,7 +107,7 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                     project.getArtifacts()
                     .stream()
                     .filter(t -> scope.contains(t.getScope()))
-                    .map(t -> new Tuple(artifactAnyLicenseInfoMap.get(t),
+                    .map(t -> new Tuple(artifactLicenseMap.get(t),
                                         artifactModelMap.get(t), t))
                     .collect(toList());
                 /*
@@ -133,41 +136,19 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                  * DEPENDENCIES
                  *
                  * Report sort order:
-                 *      Licenses (LICENSES_ORDER)
+                 *      Licenses (LICENSE_ORDER)
                  *      Model[name, url] (same if name is not blank)
                  *      Artifacts (ArtifactModelMap.ORDER)
                  */
-                TreeMap<List<AnyLicenseInfo>,Map<Model,List<Tuple>>> report =
+                TreeMap<AnyLicenseInfo,Map<Model,List<Tuple>>> report =
                     list.stream()
-                    .collect(groupingBy(Tuple::getLicenses,
-                                        () -> new TreeMap<>(LICENSES_ORDER),
+                    .collect(groupingBy(Tuple::getLicense,
+                                        () -> new TreeMap<>(LICENSE_ORDER),
                                         groupingBy(Tuple::getModel,
                                                    () -> new TreeMap<>(MODEL_ORDER),
                                                    toList())));
-                Set<ExtractedLicenseInfo> extracted =
-                    report.keySet().stream()
-                    .flatMap(List::stream)
-                    .filter(t -> (t instanceof ExtractedLicenseInfo))
-                    .map(t -> (ExtractedLicenseInfo) t)
-                    .collect(toSet());
 
-                if (! extracted.isEmpty()) {
-                    log.warn("Cannot find SPDX license(s)");
-
-                    for (ExtractedLicenseInfo license : extracted) {
-                        String id = license.getLicenseId();
-
-                        log.warn("    '" + license.getLicenseId() + "'");
-
-                        String[] seeAlso = license.getSeeAlso();
-
-                        if (seeAlso != null) {
-                            for (String string : seeAlso) {
-                                log.warn("        " + string);
-                            }
-                        }
-                    }
-                }
+                warnIfExtractedLicenseInfo(report.keySet().stream());
 
                 target = directory.toPath().resolve("DEPENDENCIES");
 
@@ -178,8 +159,7 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                                                             TRUNCATE_EXISTING))) {
                     out.println(target.getFileName());
 
-                    for (Map.Entry<List<AnyLicenseInfo>,
-                             Map<Model,List<Tuple>>> section :
+                    for (Map.Entry<AnyLicenseInfo,Map<Model,List<Tuple>>> section :
                              report.entrySet()) {
                         boolean first =
                             report.comparator()
@@ -251,9 +231,9 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
         return scope;
     }
 
-    @AllArgsConstructor @Getter @Setter @ToString
+    @AllArgsConstructor @Getter @ToString
     private class Tuple {
-        private List<AnyLicenseInfo> licenses = null;
+        private AnyLicenseInfo license = null;
         private Model model = null;
         private Artifact artifact = null;
     }
