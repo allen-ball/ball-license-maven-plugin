@@ -1,3 +1,8 @@
+2020-04-02  Allen D. Ball  <ball@hcf.dev>
+
+	* src/main/java/ball/maven/plugins/license/URLLicenseInfoParser.java:
+	Updated seeds and added "redirects" map.
+
 2020-04-01  Allen D. Ball  <ball@hcf.dev>
 
 	* Initial writing.

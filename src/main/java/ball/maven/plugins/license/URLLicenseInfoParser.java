@@ -9,7 +9,9 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.AbstractMap.SimpleEntry;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
@@ -34,7 +36,9 @@ import org.spdx.rdfparser.license.AnyLicenseInfo;
 import org.spdx.rdfparser.license.ExtractedLicenseInfo;
 import org.spdx.rdfparser.license.License;
 
+import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.spdx.rdfparser.license.LicenseInfoFactory.parseSPDXLicenseString;
 
@@ -49,6 +53,8 @@ import static org.spdx.rdfparser.license.LicenseInfoFactory.parseSPDXLicenseStri
 @Named @Singleton
 @Slf4j
 public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
+    private static final Class<?> CLASS = URLLicenseInfoParser.class;
+
     private static final HostnameVerifier NONE = new HostnameVerifierImpl();
 
     private static final Set<Integer> REDIRECT_CODES =
@@ -62,6 +68,7 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
 
     /** @serial */ private final LicenseMap map;
     /** @serial */ private final TextLicenseInfoParser parser;
+    /** @serial */ private final Map<Pattern,String> redirects;
 
     /**
      * Sole constructor.
@@ -70,8 +77,7 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
      * @param   parser          The injected {@link TextLicenseInfoParser}.
      */
     @Inject
-    public URLLicenseInfoParser(LicenseMap map,
-                                TextLicenseInfoParser parser) {
+    public URLLicenseInfoParser(LicenseMap map, TextLicenseInfoParser parser) {
         super();
 
         this.map = Objects.requireNonNull(map);
@@ -80,6 +86,9 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
         try {
             for (License value : map.values()) {
                 for (String key : value.getSeeAlso()) {
+                    put(String.format("https://spdx.org/licenses/%s.html",
+                                      value.getLicenseId()),
+                        value);
                     put(key, value);
                 }
             }
@@ -87,6 +96,7 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
             URL url =
                 getClass().getClassLoader()
                 .getResource("resources/licenses-full.json");
+
             for (JsonNode node :
                      new ObjectMapper().readTree(url).at("/licenses")) {
                 AnyLicenseInfo value =
@@ -103,19 +113,13 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
                 }
             }
 
-            Properties properties = new Properties();
-            String name = getClass().getSimpleName() + ".xml";
+            Properties seeds = getXMLProperties("seeds");
 
-            try (InputStream in = getClass().getResourceAsStream(name)) {
-                properties.loadFromXML(in);
-            }
-
-            for (String id : properties.stringPropertyNames()) {
+            for (String id : seeds.stringPropertyNames()) {
                 AnyLicenseInfo value = parseSPDXLicenseString(id);
 
                 for (String key :
-                         properties.getProperty(id)
-                         .split("(?s)[\\p{Space}]+")) {
+                         seeds.getProperty(id).split("(?s)[\\p{Space}]+")) {
                     if (isNotBlank(key)) {
                         if (! containsKey(key)) {
                             put(key, value);
@@ -123,13 +127,31 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
                     }
                 }
             }
-            /*
-             * FileNotFoundException heuristic:
-             * www.mozilla.org -> www-archive.mozilla.org
-             */
+
+            redirects =
+                getXMLProperties("redirects").entrySet()
+                .stream()
+                .map(t -> new SimpleEntry<String,String>(t.getKey().toString().trim(),
+                                                         t.getValue().toString().trim()))
+                .map(t -> new SimpleEntry<>(Pattern.compile(t.getKey()),
+                                            t.getValue()))
+                .collect(toMap(k -> k.getKey(), v -> v.getValue()));
         } catch (Exception exception) {
             throw new ExceptionInInitializerError(exception);
         }
+    }
+
+    private Properties getXMLProperties(String name) throws Exception {
+        Properties properties = new Properties();
+        String resource =
+            String.format("%1$s.%2$s.xml",
+                          getClass().getSimpleName(), name);
+
+        try (InputStream in = getClass().getResourceAsStream(resource)) {
+            properties.loadFromXML(in);
+        }
+
+        return properties;
     }
 
     @PostConstruct
@@ -180,7 +202,6 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
             }
 
             String canonicalURL = getCanonicalURL(connection);
-            String redirectURL = getRedirectURL(connection);
 
             if (isNotBlank(canonicalURL) && (! canonicalURL.equals(url))) {
                 if (value == null) {
@@ -188,13 +209,26 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
                 }
             }
 
-            if (isNotBlank(redirectURL) && (! redirectURL.equals(url))) {
-                if (value != null) {
-                    put(redirectURL, value);
-                } else {
-                    value =
-                        computeIfAbsent(redirectURL,
-                                        k -> compute(resolver, k));
+            String redirectURL = getRedirectURL(connection);
+
+            if (isBlank(redirectURL)) {
+                redirectURL =
+                    redirects.entrySet()
+                    .stream()
+                    .filter(t -> t.getKey().matcher(url).matches())
+                    .map(t -> t.getKey().matcher(url).replaceFirst(t.getValue()))
+                    .findFirst().orElse(null);
+            }
+
+            if (isNotBlank(redirectURL)) {
+                if (! redirectURL.equals(url)) {
+                    if (value != null) {
+                        put(redirectURL, value);
+                    } else {
+                        value =
+                            computeIfAbsent(redirectURL,
+                                            k -> compute(resolver, k));
+                    }
                 }
             }
 
