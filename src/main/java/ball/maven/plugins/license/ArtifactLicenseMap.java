@@ -13,6 +13,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.Function;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
@@ -145,9 +146,9 @@ public class ArtifactLicenseMap extends TreeMap<Artifact,AnyLicenseInfo> {
 
         AnyLicenseInfo license = resolver.toLicense(licenses);
 
-        if ((LicenseUtilityMethods.isEmpty(license)
+        if ((licenses.isEmpty()
              && (! (specified.isEmpty() && scanned.isEmpty())))
-            || (! resolver.isFullySpdxListed(license))) {
+            || ((! licenses.isEmpty()) && (! resolver.isFullySpdxListed(license)))) {
             log.debug("------------------------------------------------------------");
             log.debug(String.valueOf(url));
             log.debug("  Specified: " + specified);
@@ -233,20 +234,22 @@ public class ArtifactLicenseMap extends TreeMap<Artifact,AnyLicenseInfo> {
         return set;
     }
 
+    private static final Comparator<? super Boolean> TRUTH_ORDER =
+        (t, u) -> Objects.equals(t, u) ? 0 : (t ? -1 : 1);
+
     private Comparator<AnyLicenseInfo> sieve(LicenseResolver resolver) {
-        Comparator<Boolean> truthOrder = Comparator.<Boolean>reverseOrder();
         Comparator<AnyLicenseInfo> comparator =
             Comparator
-            .<AnyLicenseInfo,Boolean>comparing(t -> (! (t instanceof URLLicenseInfo)), truthOrder)
-            .thenComparing(t -> (! (t instanceof TextLicenseInfo)), truthOrder)
-            .thenComparing(t -> (! (t instanceof ExtractedLicenseInfo)), truthOrder)
-            .thenComparing(resolver::isFullySpdxListed, truthOrder)
-            .thenComparing(t -> (t instanceof LicenseSet), truthOrder)
+            .<AnyLicenseInfo,Boolean>comparing(t -> (! (t instanceof URLLicenseInfo)), TRUTH_ORDER)
+            .thenComparing(t -> (! (t instanceof TextLicenseInfo)), TRUTH_ORDER)
+            .thenComparing(t -> (! (t instanceof ExtractedLicenseInfo)), TRUTH_ORDER)
+            .thenComparing(resolver::isFullySpdxListed, TRUTH_ORDER)
+            .thenComparing(t -> (t instanceof LicenseSet), TRUTH_ORDER)
             .thenComparing(LicenseUtilityMethods::countOf,
                            Comparator.<Integer>reverseOrder())
-            .thenComparing(t -> (t instanceof WithExceptionOperator), truthOrder)
-            .thenComparing(t -> (t instanceof OrLaterOperator), truthOrder)
-            .thenComparing(resolver::isPartiallySpdxListed, truthOrder);
+            .thenComparing(t -> (t instanceof WithExceptionOperator), TRUTH_ORDER)
+            .thenComparing(t -> (t instanceof OrLaterOperator), TRUTH_ORDER)
+            .thenComparing(resolver::isPartiallySpdxListed, TRUTH_ORDER);
 
         return comparator;
     }
