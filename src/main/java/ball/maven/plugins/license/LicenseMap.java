@@ -2,7 +2,6 @@ package ball.maven.plugins.license;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.net.URL;
 import java.util.Objects;
 import java.util.TreeMap;
 import java.util.stream.Stream;
@@ -12,6 +11,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.spdx.rdfparser.license.License;
 /* import org.spdx.rdfparser.license.ListedExceptions; */
 import org.spdx.rdfparser.license.ListedLicenses;
@@ -33,6 +33,24 @@ public class LicenseMap extends TreeMap<String,License> {
      * private static final ListedExceptions EXCEPTIONS =
      *     ListedExceptions.getListedExceptions();
      */
+
+    /**
+     * {@code resources/licenses-full.json} read from SPDX artifacts.
+     */
+    public static final JsonNode LICENSES_FULL_JSON;
+
+    static {
+        try {
+            LICENSES_FULL_JSON =
+                new ObjectMapper()
+                .readTree(LicenseMap.class
+                          .getClassLoader()
+                          .getResource("resources/licenses-full.json"));
+        } catch (Exception exception) {
+            throw new ExceptionInInitializerError(exception);
+        }
+    }
+
     /**
      * Sole constructor.
      */
@@ -48,18 +66,15 @@ public class LicenseMap extends TreeMap<String,License> {
                 putIfAbsent(license.getName(), license);
             }
 
-            URL url =
-                getClass().getClassLoader()
-                .getResource("resources/licenses-full.json");
-            for (JsonNode node :
-                     new ObjectMapper().readTree(url).at("/licenses")) {
-                String spdx = node.at("/identifiers/spdx[0]").asText();
+            for (JsonNode node : LICENSES_FULL_JSON.at("/licenses")) {
+                String spdx = node.at("/identifiers/spdx/0").asText();
                 String id = node.at("/id").asText();
                 String name = node.at("/name").asText();
 
                 if (containsKey(spdx)) {
-                    putIfAbsent(id, get(spdx));
-                    putIfAbsent(name, get(spdx));
+                    Stream.of(id, name)
+                        .filter(StringUtils::isNotBlank)
+                        .forEach(t -> computeIfAbsent(t, k -> get(spdx)));
                 }
             }
         } catch (Exception exception) {

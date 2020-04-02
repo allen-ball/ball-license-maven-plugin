@@ -1,7 +1,6 @@
 package ball.maven.plugins.license;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,9 +28,9 @@ import javax.net.ssl.SSLSession;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
 import org.spdx.rdfparser.license.ExtractedLicenseInfo;
 import org.spdx.rdfparser.license.License;
@@ -93,14 +92,10 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
                 }
             }
 
-            URL url =
-                getClass().getClassLoader()
-                .getResource("resources/licenses-full.json");
-
             for (JsonNode node :
-                     new ObjectMapper().readTree(url).at("/licenses")) {
+                     LicenseMap.LICENSES_FULL_JSON.at("/licenses")) {
                 AnyLicenseInfo value =
-                    map.get(node.at("/identifiers/spdx[0]").asText());
+                    map.get(node.at("/identifiers/spdx/0").asText());
 
                 if (value != null) {
                     for (JsonNode uri : node.at("/uris")) {
@@ -211,15 +206,6 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
 
             String redirectURL = getRedirectURL(connection);
 
-            if (isBlank(redirectURL)) {
-                redirectURL =
-                    redirects.entrySet()
-                    .stream()
-                    .filter(t -> t.getKey().matcher(url).matches())
-                    .map(t -> t.getKey().matcher(url).replaceFirst(t.getValue()))
-                    .findFirst().orElse(null);
-            }
-
             if (isNotBlank(redirectURL)) {
                 if (! redirectURL.equals(url)) {
                     if (value != null) {
@@ -240,20 +226,29 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
                     document.outputSettings()
                         .syntax(Document.OutputSettings.Syntax.xml);
                 }
-
-                for (Element element :
-                         document.select("head>link[rel='canonical'][href]")) {
-                    String href = element.attr("abs:href");
-
-                    if (isNotBlank(href) && (! href.equals(url))) {
-                        value = get(href);
-                    }
-
-                    if (value != null) {
-                        break;
-                    }
-                }
-
+                /*
+                 * Heuristic: Look for a "canonical" <link/> with a known
+                 * href.
+                 */
+                value =
+                    document.select("head>link[rel='canonical'][href]")
+                    .stream()
+                    .map(t -> t.attr("abs:href"))
+                    .filter(StringUtils::isNotBlank)
+                    .filter(t -> (! t.equals(url)))
+                    .map(t -> get(t))
+                    .findFirst().orElse(null);
+                /*
+                 * Heuristics to consider:
+                 *
+                 * Search for SPDX-License-Identifier
+                 *
+                 * If a single href of http://opensource.org/licenses/([^/])
+                 * is found and $1 is in the LicenseMap
+                 */
+                /*
+                 * Parse the document if the heuristics fail.
+                 */
                 if (value == null) {
                     value = parser.parse(resolver, url, document);
                 }
@@ -294,23 +289,32 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
     }
 
     private String getRedirectURL(URLConnection connection) throws IOException {
-        String url = null;
+        String redirectURL = null;
 
         if (connection instanceof HttpURLConnection) {
+            String url = connection.getURL().toString();
             int code = ((HttpURLConnection) connection).getResponseCode();
 
             if (REDIRECT_CODES.contains(code)) {
                 String location = connection.getHeaderField("Location");
 
                 if (isNotBlank(location)) {
-                    url =
-                        URI.create(connection.getURL().toString())
-                        .resolve(location).toASCIIString();
+                    redirectURL =
+                        URI.create(url).resolve(location).toASCIIString();
                 }
+            }
+
+            if (isBlank(redirectURL)) {
+                redirectURL =
+                    redirects.entrySet()
+                    .stream()
+                    .filter(t -> t.getKey().matcher(url).matches())
+                    .map(t -> t.getKey().matcher(url).replaceFirst(t.getValue()))
+                    .findFirst().orElse(null);
             }
         }
 
-        return url;
+        return redirectURL;
     }
 
     @NoArgsConstructor @ToString
