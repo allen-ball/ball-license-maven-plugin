@@ -1,11 +1,15 @@
 package ball.maven.plugins.license;
 
+import java.io.IOException;
 import java.net.JarURLConnection;
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -93,7 +97,7 @@ public class ArtifactLicenseMap extends TreeMap<Artifact,AnyLicenseInfo> {
     }
 
     private AnyLicenseInfo compute(Artifact artifact) {
-        URL url = getArtifactURL(artifact);
+        URL url = toURL(artifact);
         /*
          * Licenses specified in the Artifact's POM
          */
@@ -103,18 +107,48 @@ public class ArtifactLicenseMap extends TreeMap<Artifact,AnyLicenseInfo> {
             .flatMap(List::stream)
             .map(t -> new URLLicenseInfo(t.getName(), resolve(url, t.getUrl())))
             .collect(toList());
-        List<AnyLicenseInfo> parsed =
-            specified.stream()
-            .map(t -> resolver.parse(t))
-            .collect(toList());
         /*
          * Licenses found in or specified by the Artifact
          */
-        List<AnyLicenseInfo> scanned =
-            scan(url).stream()
-            .map(t -> new URLLicenseInfo(t, resolve(url, t)))
+        List<URLLicenseInfo> bundle = Collections.emptyList();
+        List<AnyLicenseInfo> scanned = Collections.emptyList();
+
+        try (JarFile jar =
+                 ((JarURLConnection) url.openConnection()).getJarFile()) {
+            Manifest manifest = jar.getManifest();
+
+            if (manifest != null) {
+                bundle =
+                    Stream.of("Bundle-License")
+                    .map(t -> manifest.getMainAttributes().getValue(t))
+                    .filter(t -> isNotBlank(t))
+                    .map(t -> new URLLicenseInfo(t, resolve(url, t)))
+                    .collect(toList());
+            }
+
+            Stream<URLLicenseInfo> scan =
+                jar.stream()
+                .map(JarEntry::getName)
+                .filter(t -> INCLUDE.matcher(t).matches())
+                .filter(t -> (! EXCLUDE.matcher(t).matches()))
+                .map(t -> new URLLicenseInfo(t, resolve(url, t)));
+
+            scanned =
+                Stream.concat(bundle.stream(), scan)
+                .map(t -> resolver.parse(t))
+                .filter(t -> (! (t instanceof URLLicenseInfo)))
+                .collect(toList());
+        } catch (IOException exception) {
+            log.debug(exception.getMessage() /* , exception */);
+        }
+
+        if (specified.isEmpty()) {
+            specified.addAll(bundle);
+        }
+
+        List<AnyLicenseInfo> parsed =
+            specified.stream()
             .map(t -> resolver.parse(t))
-            .filter(t -> (! (t instanceof URLLicenseInfo)))
             .collect(toList());
         Map<String,AnyLicenseInfo> found =
             scanned.stream()
@@ -134,7 +168,6 @@ public class ArtifactLicenseMap extends TreeMap<Artifact,AnyLicenseInfo> {
             licenses.addAll(found.values());
         } else {
             licenses.clear();
-            licenses.addAll(specified);
 
             licenses =
                 IntStream.range(0, parsed.size())
@@ -151,17 +184,18 @@ public class ArtifactLicenseMap extends TreeMap<Artifact,AnyLicenseInfo> {
             || ((! licenses.isEmpty()) && (! resolver.isFullySpdxListed(license)))) {
             log.debug("------------------------------------------------------------");
             log.debug(String.valueOf(url));
-            log.debug("  Specified: " + specified);
-            log.debug("  Parsed: " + parsed);
+            log.debug("  POM:     " + specified);
+            log.debug("  Bundle:  " + bundle);
+            log.debug("  Parsed:  " + parsed);
             log.debug("  Scanned: " + scanned);
-            log.debug("  Found: " + found.values());
+            log.debug("  Found:   " + found.values());
             log.debug("  License: " + license);
             log.debug("------------------------------------------------------------");
         }
         return license;
     }
 
-    private URL getArtifactURL(Artifact artifact) {
+    private URL toURL(Artifact artifact) {
         URL url = null;
 
         try {
@@ -170,7 +204,8 @@ public class ArtifactLicenseMap extends TreeMap<Artifact,AnyLicenseInfo> {
                         artifact.getFile().toURI().toASCIIString() + "!/",
                         null)
                 .toURL();
-        } catch (Exception exception) {
+        } catch(URISyntaxException | MalformedURLException exception) {
+            log.debug(exception.getMessage(), exception);
             throw new IllegalStateException(exception);
         }
 
@@ -203,35 +238,9 @@ public class ArtifactLicenseMap extends TreeMap<Artifact,AnyLicenseInfo> {
         try {
             isAbsolute = new URI(url).isAbsolute();
         } catch (Exception exception) {
-            log.debug(exception.getMessage() /* , exception */);
         }
 
         return isAbsolute;
-    }
-
-    private Set<String> scan(URL url) {
-        Set<String> set = new TreeSet<>();
-
-        try (JarFile jar =
-                 ((JarURLConnection) url.openConnection()).getJarFile()) {
-            Manifest manifest = jar.getManifest();
-
-            if (manifest != null) {
-                Stream.of("Bundle-License")
-                    .map(t -> manifest.getMainAttributes().getValue(t))
-                    .filter(t -> isNotBlank(t))
-                    .forEach(t -> set.add(t));
-            }
-
-            jar.stream()
-                .map(JarEntry::getName)
-                .filter(t -> INCLUDE.matcher(t).matches())
-                .filter(t -> (! EXCLUDE.matcher(t).matches()))
-                .forEach(t -> set.add(t));
-        } catch (Exception exception) {
-        }
-
-        return set;
     }
 
     private static final Comparator<? super Boolean> TRUTH_ORDER =
