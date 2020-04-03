@@ -18,6 +18,7 @@ import org.spdx.rdfparser.license.AnyLicenseInfo;
 import org.spdx.rdfparser.license.ExtractedLicenseInfo;
 import org.spdx.rdfparser.license.SpdxNoneLicense;
 
+import static ball.maven.plugins.license.LicenseUtilityMethods;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.spdx.compare.LicenseCompareHelper.matchingStandardLicenseIds;
@@ -135,29 +136,34 @@ public class TextLicenseInfoParser extends TreeMap<ExtractedLicenseInfo,AnyLicen
             } catch (Exception exception) {
             }
 
-            if (value != null && (! LicenseUtilityMethods.isFullySpdxListed(value))) {
+            if (value != null && (! isFullySpdxListed(value))) {
                 maybe = value;
                 value = null;
             }
         }
 
-        if (value == null && isNotBlank(key.getExtractedText())) {
-            try {
-                String[] ids =
-                    matchingStandardLicenseIds(key.getExtractedText());
+        if (value == null) {
+            if (isNotBlank(key.getExtractedText())) {
+                try {
+                    String[] ids =
+                        matchingStandardLicenseIds(key.getExtractedText());
 
-                if (ids.length > 0) {
-                    AnyLicenseInfo[] members = new AnyLicenseInfo[ids.length];
+                    if (ids.length > 0) {
+                        AnyLicenseInfo[] members =
+                            new AnyLicenseInfo[ids.length];
 
-                    for (int i = 0; i < members.length; i += 1) {
-                        members[i] = parseSPDXLicenseString(ids[i]);
+                        for (int i = 0; i < members.length; i += 1) {
+                            members[i] = parseSPDXLicenseString(ids[i]);
+                        }
+
+                        value = resolver.toLicense(Arrays.asList(members));
                     }
-
-                    value = resolver.toLicense(Arrays.asList(members));
-                } else {
-                    value = maybe;
+                } catch (Exception exception) {
+                    value = null;
                 }
-            } catch (Exception exception) {
+            }
+
+            if (value == null) {
                 value = maybe;
             }
         }
