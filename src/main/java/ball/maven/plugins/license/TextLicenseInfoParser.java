@@ -18,7 +18,7 @@ import org.spdx.rdfparser.license.AnyLicenseInfo;
 import org.spdx.rdfparser.license.ExtractedLicenseInfo;
 import org.spdx.rdfparser.license.SpdxNoneLicense;
 
-import static ball.maven.plugins.license.LicenseUtilityMethods;
+import static ball.maven.plugins.license.LicenseUtilityMethods.isFullySpdxListed;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.spdx.compare.LicenseCompareHelper.matchingStandardLicenseIds;

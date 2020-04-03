@@ -38,7 +38,7 @@ import org.spdx.rdfparser.license.LicenseSet;
 import org.spdx.rdfparser.license.OrLaterOperator;
 import org.spdx.rdfparser.license.WithExceptionOperator;
 
-import static ball.maven.plugins.license.LicenseUtilityMethods;
+import static ball.maven.plugins.license.LicenseUtilityMethods.isFullySpdxListed;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
