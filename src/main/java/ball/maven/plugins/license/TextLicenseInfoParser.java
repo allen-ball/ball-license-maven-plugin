@@ -135,7 +135,7 @@ public class TextLicenseInfoParser extends TreeMap<ExtractedLicenseInfo,AnyLicen
             } catch (Exception exception) {
             }
 
-            if (value != null && (! resolver.isFullySpdxListed(value))) {
+            if (value != null && (! LicenseUtilityMethods.isFullySpdxListed(value))) {
                 maybe = value;
                 value = null;
             }

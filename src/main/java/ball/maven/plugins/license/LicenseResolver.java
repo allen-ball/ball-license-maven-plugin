@@ -11,7 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
 import org.spdx.rdfparser.license.DisjunctiveLicenseSet;
 import org.spdx.rdfparser.license.ExtractedLicenseInfo;
-import org.spdx.rdfparser.license.License;
 
 /**
  * {@link AnyLicenseInfo} resolver with methods to parse, look-up, and
@@ -120,42 +119,5 @@ public class LicenseResolver {
         }
 
         return out;
-    }
-
-    /**
-     * Method to test if an {@link AnyLicenseInfo} is fully specified by
-     * SPDX license(s).
-     *
-     * @param   license         The {@link AnyLicenseInfo}.
-     *
-     * @return  {@code true} if fully specified; {@code false} otherwise.
-     */
-    public boolean isFullySpdxListed(AnyLicenseInfo license) {
-        boolean fullySpecified =
-             LicenseUtilityMethods.walk(license)
-            .filter(LicenseUtilityMethods::isLeaf)
-            .map(t -> (t instanceof License))
-            .reduce(Boolean::logicalAnd).orElse(false);
-
-        return fullySpecified;
-    }
-
-    /**
-     * Method to test if an {@link AnyLicenseInfo} is partially specified by
-     * SPDX license(s).
-     *
-     * @param   license         The {@link AnyLicenseInfo}.
-     *
-     * @return  {@code true} if partially specified; {@code false}
-     *          otherwise.
-     */
-    public boolean isPartiallySpdxListed(AnyLicenseInfo license) {
-        boolean partiallySpecified =
-            LicenseUtilityMethods.walk(license)
-            .filter(LicenseUtilityMethods::isLeaf)
-            .map(t -> (t instanceof License))
-            .reduce(Boolean::logicalOr).orElse(false);
-
-        return partiallySpecified;
     }
 }

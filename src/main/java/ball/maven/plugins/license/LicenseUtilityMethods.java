@@ -4,6 +4,7 @@ import java.util.stream.Stream;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
+import org.spdx.rdfparser.license.License;
 import org.spdx.rdfparser.license.LicenseSet;
 import org.spdx.rdfparser.license.OrLaterOperator;
 import org.spdx.rdfparser.license.WithExceptionOperator;
@@ -148,5 +149,42 @@ public abstract class LicenseUtilityMethods {
     public static boolean isOperator(AnyLicenseInfo node) {
         return (node instanceof OrLaterOperator
                 || node instanceof WithExceptionOperator);
+    }
+
+    /**
+     * Method to test if an {@link AnyLicenseInfo} is fully specified by
+     * SPDX license(s).
+     *
+     * @param   license         The {@link AnyLicenseInfo}.
+     *
+     * @return  {@code true} if fully specified; {@code false} otherwise.
+     */
+    public static boolean isFullySpdxListed(AnyLicenseInfo license) {
+        boolean fullySpecified =
+             LicenseUtilityMethods.walk(license)
+            .filter(LicenseUtilityMethods::isLeaf)
+            .map(t -> (t instanceof License))
+            .reduce(Boolean::logicalAnd).orElse(false);
+
+        return fullySpecified;
+    }
+
+    /**
+     * Method to test if an {@link AnyLicenseInfo} is partially specified by
+     * SPDX license(s).
+     *
+     * @param   license         The {@link AnyLicenseInfo}.
+     *
+     * @return  {@code true} if partially specified; {@code false}
+     *          otherwise.
+     */
+    public static boolean isPartiallySpdxListed(AnyLicenseInfo license) {
+        boolean partiallySpecified =
+            LicenseUtilityMethods.walk(license)
+            .filter(LicenseUtilityMethods::isLeaf)
+            .map(t -> (t instanceof License))
+            .reduce(Boolean::logicalOr).orElse(false);
+
+        return partiallySpecified;
     }
 }

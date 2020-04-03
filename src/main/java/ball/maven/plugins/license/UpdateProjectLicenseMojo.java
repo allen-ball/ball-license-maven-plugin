@@ -88,13 +88,13 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
 
             license = resolver.toLicense(list);
 
-            if (! resolver.isFullySpdxListed(license)) {
+            if (! LicenseUtilityMethods.isFullySpdxListed(license)) {
                 warnIfExtractedLicenseInfo(Stream.of(license));
             }
         }
 
         if (license != null) {
-            if (resolver.isFullySpdxListed(license)) {
+            if (LicenseUtilityMethods.isFullySpdxListed(license)) {
                 String id = license.toString();
 
                 if (id != null && (! id.equals(name))) {
@@ -116,7 +116,7 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
          * fail if it is not), ...
          */
         if (verify) {
-            if (resolver.isFullySpdxListed(license)) {
+            if (LicenseUtilityMethods.isFullySpdxListed(license)) {
                 /*
                  * TBD: Bad assumption.
                  */

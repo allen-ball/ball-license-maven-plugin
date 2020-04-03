@@ -58,6 +58,23 @@ public class ArtifactLicenseMap extends TreeMap<Artifact,AnyLicenseInfo> {
     private static final Pattern EXCLUDE =
         Pattern.compile("(?i)^.*[.]class$");
 
+
+    private static final Comparator<? super Boolean> TRUTH =
+        (t, u) -> Objects.equals(t, u) ? 0 : (t ? -1 : 1);
+    private static Comparator<? super AnyLicenseInfo> SIEVE =
+        Comparator
+        .<AnyLicenseInfo,Boolean>
+        comparing(t -> (! (t instanceof URLLicenseInfo)), TRUTH)
+        .thenComparing(t -> (! (t instanceof TextLicenseInfo)), TRUTH)
+        .thenComparing(t -> (! (t instanceof ExtractedLicenseInfo)), TRUTH)
+        .thenComparing(LicenseUtilityMethods::isFullySpdxListed, TRUTH)
+        .thenComparing(t -> (t instanceof LicenseSet), TRUTH)
+        .thenComparing(LicenseUtilityMethods::countOf,
+                       Comparator.<Integer>reverseOrder())
+        .thenComparing(t -> (t instanceof WithExceptionOperator), TRUTH)
+        .thenComparing(t -> (t instanceof OrLaterOperator), TRUTH)
+        .thenComparing(LicenseUtilityMethods::isPartiallySpdxListed, TRUTH);
+
     /** @serial */ private final ArtifactModelMap map;
     /** @serial */ private final LicenseResolver resolver;
 
@@ -153,7 +170,7 @@ public class ArtifactLicenseMap extends TreeMap<Artifact,AnyLicenseInfo> {
         Map<String,AnyLicenseInfo> found =
             scanned.stream()
             .filter(t -> LicenseUtilityMethods.countOf(t) > 0)
-            .filter(resolver::isFullySpdxListed)
+            .filter(LicenseUtilityMethods::isFullySpdxListed)
             .collect(toMap(k -> k.toString(), v -> v, (t, u) -> t));
 
         if (specified.isEmpty() && found.isEmpty()) {
@@ -172,7 +189,7 @@ public class ArtifactLicenseMap extends TreeMap<Artifact,AnyLicenseInfo> {
             licenses =
                 IntStream.range(0, parsed.size())
                 .mapToObj(t -> Arrays.asList(specified.get(t), parsed.get(t)))
-                .peek(t -> t.sort(sieve(resolver)))
+                .peek(t -> t.sort(SIEVE))
                 .map(t -> t.get(0))
                 .collect(toList());
         }
@@ -181,7 +198,7 @@ public class ArtifactLicenseMap extends TreeMap<Artifact,AnyLicenseInfo> {
 
         if ((licenses.isEmpty()
              && (! (specified.isEmpty() && scanned.isEmpty())))
-            || ((! licenses.isEmpty()) && (! resolver.isFullySpdxListed(license)))) {
+            || ((! licenses.isEmpty()) && (! LicenseUtilityMethods.isFullySpdxListed(license)))) {
             log.debug("------------------------------------------------------------");
             log.debug(String.valueOf(url));
             log.debug("  POM:     " + specified);
@@ -241,26 +258,6 @@ public class ArtifactLicenseMap extends TreeMap<Artifact,AnyLicenseInfo> {
         }
 
         return isAbsolute;
-    }
-
-    private static final Comparator<? super Boolean> TRUTH_ORDER =
-        (t, u) -> Objects.equals(t, u) ? 0 : (t ? -1 : 1);
-
-    private Comparator<AnyLicenseInfo> sieve(LicenseResolver resolver) {
-        Comparator<AnyLicenseInfo> comparator =
-            Comparator
-            .<AnyLicenseInfo,Boolean>comparing(t -> (! (t instanceof URLLicenseInfo)), TRUTH_ORDER)
-            .thenComparing(t -> (! (t instanceof TextLicenseInfo)), TRUTH_ORDER)
-            .thenComparing(t -> (! (t instanceof ExtractedLicenseInfo)), TRUTH_ORDER)
-            .thenComparing(resolver::isFullySpdxListed, TRUTH_ORDER)
-            .thenComparing(t -> (t instanceof LicenseSet), TRUTH_ORDER)
-            .thenComparing(LicenseUtilityMethods::countOf,
-                           Comparator.<Integer>reverseOrder())
-            .thenComparing(t -> (t instanceof WithExceptionOperator), TRUTH_ORDER)
-            .thenComparing(t -> (t instanceof OrLaterOperator), TRUTH_ORDER)
-            .thenComparing(resolver::isPartiallySpdxListed, TRUTH_ORDER);
-
-        return comparator;
     }
 
     private int countOf(Collection<? extends AnyLicenseInfo> collection) {
