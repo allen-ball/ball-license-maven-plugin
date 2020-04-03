@@ -30,6 +30,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.artifact.Artifact;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
 import org.spdx.rdfparser.license.ExtractedLicenseInfo;
@@ -37,6 +38,7 @@ import org.spdx.rdfparser.license.LicenseSet;
 import org.spdx.rdfparser.license.OrLaterOperator;
 import org.spdx.rdfparser.license.WithExceptionOperator;
 
+import static ball.maven.plugins.license.LicenseUtilityMethods;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
@@ -57,7 +59,6 @@ public class ArtifactLicenseMap extends TreeMap<Artifact,AnyLicenseInfo> {
         Pattern.compile("(?i)^(.*/|)(LICENSE([.][^/]+)?|about.html)$");
     private static final Pattern EXCLUDE =
         Pattern.compile("(?i)^.*[.]class$");
-
 
     private static final Comparator<? super Boolean> TRUTH =
         (t, u) -> Objects.equals(t, u) ? 0 : (t ? -1 : 1);
@@ -138,8 +139,12 @@ public class ArtifactLicenseMap extends TreeMap<Artifact,AnyLicenseInfo> {
                 bundle =
                     Stream.of("Bundle-License")
                     .map(t -> manifest.getMainAttributes().getValue(t))
-                    .filter(t -> isNotBlank(t))
-                    .map(t -> new URLLicenseInfo(t, resolve(url, t)))
+                    .filter(StringUtils::isNotBlank)
+                    .flatMap(t -> Stream.of(t.split("[,\\p{Space}]+")))
+                    .map(t -> Pattern.compile("((.+);link=)?(.*)").matcher(t))
+                    .filter(t -> t.matches())
+                    .map(t -> new URLLicenseInfo(isNotBlank(t.group(2)) ? t.group(2) : t.group(3),
+                                                 resolve(url, t.group(3))))
                     .collect(toList());
             }
 
@@ -198,7 +203,7 @@ public class ArtifactLicenseMap extends TreeMap<Artifact,AnyLicenseInfo> {
 
         if ((licenses.isEmpty()
              && (! (specified.isEmpty() && scanned.isEmpty())))
-            || ((! licenses.isEmpty()) && (! LicenseUtilityMethods.isFullySpdxListed(license)))) {
+            || ((! licenses.isEmpty()) && (! isFullySpdxListed(license)))) {
             log.debug("------------------------------------------------------------");
             log.debug(String.valueOf(url));
             log.debug("  POM:     " + specified);

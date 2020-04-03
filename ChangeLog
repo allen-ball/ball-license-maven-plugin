@@ -1,5 +1,9 @@
 2020-04-02  Allen D. Ball  <ball@hcf.dev>
 
+	* src/main/java/ball/maven/plugins/license/ArtifactLicenseMap.java:
+	Parse Bundle-License headers containing links in
+	"{name};link={link}" format.
+
 	* Moved LicenseResolver methods that could be defined as static to
 	LicenseUtilityMethods.
 
