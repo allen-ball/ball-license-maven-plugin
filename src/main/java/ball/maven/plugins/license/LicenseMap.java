@@ -68,11 +68,10 @@ public class LicenseMap extends TreeMap<String,License> {
 
             for (JsonNode node : LICENSES_FULL_JSON.at("/licenses")) {
                 String spdx = node.at("/identifiers/spdx/0").asText();
-                String id = node.at("/id").asText();
-                String name = node.at("/name").asText();
 
                 if (containsKey(spdx)) {
-                    Stream.of(id, name)
+                    Stream.of(node.at("/id").asText(),
+                              node.at("/name").asText())
                         .filter(StringUtils::isNotBlank)
                         .forEach(t -> computeIfAbsent(t, k -> get(spdx)));
                 }
@@ -100,8 +99,7 @@ public class LicenseMap extends TreeMap<String,License> {
 
                 value =
                     Stream.of(string,
-                              string.replaceAll("[\\p{Space}]", "-"),
-                              string.replaceAll("licence", "license"))
+                              string.replaceAll("[\\p{Space}]+", "-"))
                     .map(t -> super.get(t))
                     .filter(Objects::nonNull)
                     .findFirst().orElse(null);
