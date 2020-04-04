@@ -93,8 +93,8 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
     private String excludeScope = EXCLUDE_SCOPE;
 
     @Inject private MavenProject project = null;
-    @Inject private ArtifactLicenseMap artifactLicenseMap = null;
-    @Inject private ArtifactModelMap artifactModelMap = null;
+    @Inject private ArtifactLicenseCatalog catalog = null;
+    @Inject private ArtifactModelCache cache = null;
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
@@ -107,8 +107,7 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                     project.getArtifacts()
                     .stream()
                     .filter(t -> scope.contains(t.getScope()))
-                    .map(t -> new Tuple(artifactLicenseMap.get(t),
-                                        artifactModelMap.get(t), t))
+                    .map(t -> new Tuple(catalog.get(t), cache.get(t), t))
                     .collect(toList());
                 /*
                  * LICENSE
@@ -138,7 +137,7 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                  * Report sort order:
                  *      Licenses (LICENSE_ORDER)
                  *      Model[name, url] (same if name is not blank)
-                 *      Artifacts (ArtifactModelMap.ORDER)
+                 *      Artifacts (ArtifactModelCache.ORDER)
                  */
                 TreeMap<AnyLicenseInfo,Map<Model,List<Tuple>>> report =
                     list.stream()

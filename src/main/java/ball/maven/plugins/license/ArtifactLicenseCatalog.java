@@ -1,5 +1,8 @@
 package ball.maven.plugins.license;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.JarURLConnection;
 import java.net.MalformedURLException;
@@ -14,6 +17,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -32,6 +36,8 @@ import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.DefaultArtifact;
+import org.apache.maven.execution.MavenSession;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
 import org.spdx.rdfparser.license.ExtractedLicenseInfo;
 import org.spdx.rdfparser.license.LicenseSet;
@@ -41,7 +47,10 @@ import org.spdx.rdfparser.license.WithExceptionOperator;
 import static ball.maven.plugins.license.LicenseUtilityMethods.isFullySpdxListed;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
+import static org.apache.maven.artifact.ArtifactUtils.key;
+import static org.spdx.rdfparser.license.LicenseInfoFactory.parseSPDXLicenseString;
 
 /**
  * {@link Artifact} to {@link LicenseSet}
@@ -54,7 +63,9 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
  */
 @Named @Singleton
 @Slf4j
-public class ArtifactLicenseMap extends TreeMap<Artifact,AnyLicenseInfo> {
+public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
+    private static final String CATALOG = "artifact-license-catalog.xml";
+
     private static final Pattern INCLUDE =
         Pattern.compile("(?i)^(.*/|)(LICENSE([.][^/]+)?|about.html)$");
     private static final Pattern EXCLUDE =
@@ -76,29 +87,77 @@ public class ArtifactLicenseMap extends TreeMap<Artifact,AnyLicenseInfo> {
         .thenComparing(t -> (t instanceof OrLaterOperator), TRUTH)
         .thenComparing(LicenseUtilityMethods::isPartiallySpdxListed, TRUTH);
 
-    /** @serial */ private final ArtifactModelMap map;
+    /** @serial */ private final MavenSession session;
+    /** @serial */ private final ArtifactModelCache cache;
     /** @serial */ private final LicenseResolver resolver;
+    private final File file;
+    private final Properties catalog = new Properties();
 
     /**
      * Sole constructor.
      *
-     * @param   map             The injected {@link ArtifactModelMap}.
+     * @param   session         The injected {@link MavenSession}.
+     * @param   cache           The injected {@link ArtifactModelCache}.
      * @param   resolver        The injected {@link LicenseResolver}.
      */
     @Inject
-    public ArtifactLicenseMap(ArtifactModelMap map, LicenseResolver resolver) {
-        super(ArtifactModelMap.ORDER);
+    public ArtifactLicenseCatalog(MavenSession session,
+                                  ArtifactModelCache cache,
+                                  LicenseResolver resolver) {
+        super();
 
-        this.map = Objects.requireNonNull(map);
+        this.session = Objects.requireNonNull(session);
+        this.cache = Objects.requireNonNull(cache);
         this.resolver = Objects.requireNonNull(resolver);
+        this.file =
+            new File(session.getLocalRepository().getBasedir(), CATALOG);
     }
 
     @PostConstruct
-    public void init() { }
+    public void init() {
+        if (file.exists()) {
+            try (FileInputStream in = new FileInputStream(file)) {
+                catalog.loadFromXML(in);
+            } catch (IOException exception) {
+                log.warn("Cannot read " + file);
+            }
+
+            for (String key : catalog.stringPropertyNames()) {
+                try {
+                    String[] gav = key.split(":", 3);
+                    Artifact artifact =
+                        new DefaultArtifact(gav[0], gav[1], gav[2],
+                                            EMPTY, "pom", EMPTY, null);
+                    AnyLicenseInfo license =
+                        parseSPDXLicenseString(catalog.getProperty(key));
+
+                    put(artifact, license);
+                } catch (Exception exception) {
+                    log.warn(exception.getMessage(), exception);
+                }
+            }
+        }
+    }
 
     @PreDestroy
     public void destroy() {
         log.debug(getClass().getSimpleName() + ".size() = " + size());
+
+        boolean changed =
+            entrySet().stream()
+            .filter(t -> isFullySpdxListed(t.getValue()))
+            .map(t -> (! Objects.equals(t.getValue().toString(),
+                                        catalog.put(key(t.getKey()),
+                                                    t.getValue().toString()))))
+            .reduce(Boolean::logicalOr).orElse(! file.exists());
+
+        if (changed) {
+            try (FileOutputStream out = new FileOutputStream(file)) {
+                catalog.storeToXML(out, file.getName());
+            } catch (IOException exception) {
+                log.warn("Cannot write " + file);
+            }
+        }
     }
 
     @Override
@@ -120,10 +179,11 @@ public class ArtifactLicenseMap extends TreeMap<Artifact,AnyLicenseInfo> {
          * Licenses specified in the Artifact's POM
          */
         List<URLLicenseInfo> specified =
-            Stream.of(map.get(artifact).getLicenses())
+            Stream.of(cache.get(artifact).getLicenses())
             .filter(Objects::nonNull)
             .flatMap(List::stream)
-            .map(t -> new URLLicenseInfo(t.getName(), resolve(url, t.getUrl())))
+            .map(t -> new URLLicenseInfo(t.getName(),
+                                         resolve(url, t.getUrl())))
             .collect(toList());
         /*
          * Licenses found in or specified by the Artifact

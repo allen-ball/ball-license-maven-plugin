@@ -30,7 +30,7 @@ import static org.apache.maven.model.building.ModelBuildingRequest.VALIDATION_LE
  */
 @Named @Singleton
 @Slf4j
-public class ArtifactModelMap extends TreeMap<Artifact,Model> {
+public class ArtifactModelCache extends TreeMap<Artifact,Model> {
     public static final Comparator<Artifact> ORDER =
         Comparator
         .comparing(Artifact::getGroupId)
@@ -49,8 +49,8 @@ public class ArtifactModelMap extends TreeMap<Artifact,Model> {
      * @param   reader          The injected {@link ModelReader}.
      */
     @Inject
-    public ArtifactModelMap(MavenSession session,
-                            ProjectBuilder builder, ModelReader reader) {
+    public ArtifactModelCache(MavenSession session,
+                              ProjectBuilder builder, ModelReader reader) {
         super(ORDER);
 
         this.session = Objects.requireNonNull(session);

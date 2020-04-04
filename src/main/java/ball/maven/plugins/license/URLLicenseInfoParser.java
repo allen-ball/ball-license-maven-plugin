@@ -52,8 +52,6 @@ import static org.spdx.rdfparser.license.LicenseInfoFactory.parseSPDXLicenseStri
 @Named @Singleton
 @Slf4j
 public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
-    private static final Class<?> CLASS = URLLicenseInfoParser.class;
-
     private static final HostnameVerifier NONE = new HostnameVerifierImpl();
 
     private static final Set<Integer> REDIRECT_CODES =
@@ -101,9 +99,7 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
                     for (JsonNode uri : node.at("/uris")) {
                         String key = uri.asText();
 
-                        if (! containsKey(key)) {
-                            put(key, value);
-                        }
+                        putIfAbsent(key, value);
                     }
                 }
             }
@@ -114,11 +110,9 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
                 AnyLicenseInfo value = parseSPDXLicenseString(id);
 
                 for (String key :
-                         seeds.getProperty(id).split("(?s)[\\p{Space}]+")) {
+                         seeds.getProperty(id).trim().split("[\\p{Space}]+")) {
                     if (isNotBlank(key)) {
-                        if (! containsKey(key)) {
-                            put(key, value);
-                        }
+                        putIfAbsent(key, value);
                     }
                 }
             }
@@ -126,11 +120,8 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
             redirects =
                 getXMLProperties("redirects").entrySet()
                 .stream()
-                .map(t -> new SimpleEntry<String,String>(t.getKey().toString().trim(),
-                                                         t.getValue().toString().trim()))
-                .map(t -> new SimpleEntry<>(Pattern.compile(t.getKey()),
-                                            t.getValue()))
-                .collect(toMap(k -> k.getKey(), v -> v.getValue()));
+                .collect(toMap(k -> Pattern.compile(k.getKey().toString()),
+                               v -> v.getValue().toString().trim()));
         } catch (Exception exception) {
             throw new ExceptionInInitializerError(exception);
         }

@@ -64,7 +64,7 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
     private boolean verify = true;
 
     @Inject private MavenProject project = null;
-    @Inject private ArtifactLicenseMap map = null;
+    @Inject private ArtifactLicenseCatalog catalog = null;
     @Inject private LicenseResolver resolver;
 
     @Override
@@ -184,10 +184,10 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
             }
         }
         /*
-         * ... and cache the result.
+         * ... and record the result.
          */
         if (license != null) {
-            map.put(project.getArtifact(), license);
+            catalog.put(project.getArtifact(), license);
         }
     }
 }
