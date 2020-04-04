@@ -90,8 +90,8 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
     /** @serial */ private final MavenSession session;
     /** @serial */ private final ArtifactModelCache cache;
     /** @serial */ private final LicenseResolver resolver;
-    private final File file;
-    private final Properties catalog = new Properties();
+    /** @serial */ private final File file;
+    /** @serial */ private final Properties catalog = new Properties();
 
     /**
      * Sole constructor.
