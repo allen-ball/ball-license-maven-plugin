@@ -36,8 +36,8 @@ import static org.spdx.rdfparser.license.LicenseInfoFactory.parseSPDXLicenseStri
 public class TextLicenseInfoParser extends TreeMap<ExtractedLicenseInfo,AnyLicenseInfo> {
     private static final Comparator<ExtractedLicenseInfo> COMPARATOR =
         Comparator
-        .comparing(ExtractedLicenseInfo::getLicenseId)
-        .thenComparing(ExtractedLicenseInfo::getExtractedText);
+        .comparing(ExtractedLicenseInfo::getExtractedText)
+        .thenComparing(ExtractedLicenseInfo::getLicenseId);
 
     /**
      * Sole constructor.
