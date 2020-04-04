@@ -38,6 +38,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.execution.MavenSession;
+import org.apache.maven.model.Model;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
 import org.spdx.rdfparser.license.ExtractedLicenseInfo;
 import org.spdx.rdfparser.license.LicenseSet;
@@ -124,14 +125,8 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
 
             for (String key : catalog.stringPropertyNames()) {
                 try {
-                    String[] gav = key.split(":", 3);
-                    Artifact artifact =
-                        new DefaultArtifact(gav[0], gav[1], gav[2],
-                                            EMPTY, "pom", EMPTY, null);
-                    AnyLicenseInfo license =
-                        parseSPDXLicenseString(catalog.getProperty(key));
-
-                    put(artifact, license);
+                    put(new KeyArtifact(key),
+                        parseSPDXLicenseString(catalog.getProperty(key)));
                 } catch (Exception exception) {
                     log.warn(exception.getMessage(), exception);
                 }
@@ -175,15 +170,17 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
 
     private AnyLicenseInfo compute(Artifact artifact) {
         URL url = toURL(artifact);
+        Model model = cache.get(artifact);
         /*
          * Licenses specified in the Artifact's POM
          */
         List<URLLicenseInfo> specified =
-            Stream.of(cache.get(artifact).getLicenses())
+            Stream.of(model.getLicenses())
             .filter(Objects::nonNull)
             .flatMap(List::stream)
             .map(t -> new URLLicenseInfo(t.getName(),
-                                         resolve(url, t.getUrl())))
+                                         resolve(toURL(model.getUrl()),
+                                                 t.getUrl())))
             .collect(toList());
         /*
          * Licenses found in or specified by the Artifact
@@ -294,6 +291,20 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
         return url;
     }
 
+    private URL toURL(String string) {
+        URL url = null;
+
+        if (isNotBlank(string)) {
+            try {
+                url = new URI(string).toURL();
+            } catch(URISyntaxException | MalformedURLException exception) {
+                log.debug(exception.getMessage(), exception);
+            }
+        }
+
+        return url;
+    }
+
     private String[] resolve(URL root, String urls) {
         ArrayList<String> list = new ArrayList<>();
 
@@ -302,8 +313,14 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
                 if (isNotBlank(url)) {
                     String value = url;
 
-                    if (! isAbsolute(value)) {
-                        value = root.toString() + value;
+                    if (root != null && (! isAbsolute(value))) {
+                        String string = root.toString();
+
+                        if (! string.endsWith("/")) {
+                            string += "/";
+                        }
+
+                        value = string + value;
                     }
 
                     list.add(value);
@@ -327,5 +344,13 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
 
     private int countOf(Collection<? extends AnyLicenseInfo> collection) {
         return collection.stream().mapToInt(LicenseUtilityMethods::countOf).sum();
+    }
+
+    private class KeyArtifact extends DefaultArtifact {
+        public KeyArtifact(String gav) { this(gav.split(":", 3)); }
+
+        private KeyArtifact(String[] gav) {
+            super(gav[0], gav[1], gav[2], EMPTY, "pom", EMPTY, null);
+        }
     }
 }
