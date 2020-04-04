@@ -3,7 +3,10 @@
 <!-- $Id$ -->
 <properties>
   <entry key="BSD-3-Clause">
+    https://www.antlr.org/license.html
     http://www.jcraft.com/jsch/LICENSE.txt
+    http://www.eclipse.org/org/documents/edl-v10.php
+    https://raw.github.com/jsonld-java/jsonld-java/master/LICENCE
   </entry>
   <entry key="CDDL-1.0">
     https://glassfish.dev.java.net/public/CDDLv1.0.html
@@ -15,6 +18,10 @@
   </entry>
   <entry key="GPL-2.0 WITH Classpath-exception-2.0">
     http://www.gnu.org/software/classpath/license.html
+  </entry>
+  <entry key="MIT">
+    https://www.bouncycastle.org/licence.html
+    https://jsoup.org/license
   </entry>
   <entry key="MPL-1.0">
     https://www.mozilla.org/MPL/MPL-1.0.txt

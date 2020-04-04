@@ -75,17 +75,21 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
      */
     @Inject
     public URLLicenseInfoParser(LicenseMap map, TextLicenseInfoParser parser) {
-        super();
+        super(String.CASE_INSENSITIVE_ORDER);
 
         this.map = Objects.requireNonNull(map);
         this.parser = Objects.requireNonNull(parser);
 
         try {
             for (License value : map.values()) {
+                String id = value.getLicenseId();
+
+                put(String.format("https://opensource.org/licenses/%s", id),
+                    value);
+                put(String.format("https://spdx.org/licenses/%s.html", id),
+                    value);
+
                 for (String key : value.getSeeAlso()) {
-                    put(String.format("https://spdx.org/licenses/%s.html",
-                                      value.getLicenseId()),
-                        value);
                     put(key, value);
                 }
             }
@@ -107,13 +111,15 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
             Properties seeds = getXMLProperties("seeds");
 
             for (String id : seeds.stringPropertyNames()) {
-                AnyLicenseInfo value = parseSPDXLicenseString(id);
+                try {
+                    AnyLicenseInfo value = parseSPDXLicenseString(id);
 
-                for (String key :
-                         seeds.getProperty(id).trim().split("[\\p{Space}]+")) {
-                    if (isNotBlank(key)) {
-                        putIfAbsent(key, value);
-                    }
+                    Stream.of(seeds.getProperty(id)
+                              .trim().split("[\\p{Space}]+"))
+                        .filter(StringUtils::isNotBlank)
+                        .forEach(t -> putIfAbsent(t, value));
+                } catch (Exception exception) {
+                    log.warn(exception.getMessage(), exception);
                 }
             }
 
@@ -189,7 +195,7 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
 
             String canonicalURL = getCanonicalURL(connection);
 
-            if (isNotBlank(canonicalURL) && (! canonicalURL.equals(url))) {
+            if (isNotBlank(canonicalURL) && (! areEqualKeys(canonicalURL, url))) {
                 if (value == null) {
                     value = get(canonicalURL);
                 }
@@ -198,7 +204,7 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
             String redirectURL = getRedirectURL(connection);
 
             if (isNotBlank(redirectURL)) {
-                if (! redirectURL.equals(url)) {
+                if (! areEqualKeys(redirectURL, url)) {
                     if (value != null) {
                         put(redirectURL, value);
                     } else {
@@ -226,7 +232,7 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
                     .stream()
                     .map(t -> t.attr("abs:href"))
                     .filter(StringUtils::isNotBlank)
-                    .filter(t -> (! t.equals(url)))
+                    .filter(t -> (! areEqualKeys(t, url)))
                     .map(t -> get(t))
                     .findFirst().orElse(null);
                 /*
@@ -256,6 +262,10 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
         }
 
         return value;
+    }
+
+    private boolean areEqualKeys(String left, String right) {
+        return Objects.compare(left, right, comparator()) == 0;
     }
 
     private String getCanonicalURL(URLConnection connection) {

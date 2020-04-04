@@ -2,10 +2,7 @@
 <!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
 <!-- $Id$ -->
 <properties>
-  <entry key="(?i)https?://github.com/([^/]+)/([^/]+)/blob/(.*)">
-    https://raw.githubusercontent.com/$1/$2/$3
-  </entry>
-  <entry key="(?i)https?://github.com/([^/]+)/([^/]+)/master/(.*)">
-    https://raw.githubusercontent.com/$1/$2/master/$3
+  <entry key="(?i)https?://github.com/([^/]+)/([^/]+)(/[^/]+)*/(LICENSE([.][^.]+)?)">
+    https://raw.githubusercontent.com/$1/$2/master/$4
   </entry>
 </properties>
