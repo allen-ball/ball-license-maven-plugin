@@ -50,7 +50,7 @@ public abstract class AbstractLicenseMojo extends AbstractMojo {
             .collect(toSet());
 
         if (! extracted.isEmpty()) {
-            log.warn("Cannot find SPDX license(s)");
+            log.warn("Cannot match to SPDX license(s)");
 
             for (ExtractedLicenseInfo license : extracted) {
                 String id = license.getLicenseId();
@@ -61,7 +61,9 @@ public abstract class AbstractLicenseMojo extends AbstractMojo {
 
                 if (seeAlso != null) {
                     for (String string : seeAlso) {
-                        log.warn("        " + string);
+                        if (! string.equals(license.getLicenseId())) {
+                            log.warn("        " + string);
+                        }
                     }
                 }
             }
