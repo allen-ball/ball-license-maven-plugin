@@ -1,6 +1,8 @@
 package ball.maven.plugins.license;
 
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Objects;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -113,9 +115,12 @@ public class LicenseResolver {
         if (in.size() == 1) {
             out = in.iterator().next();
         } else {
-            out =
-                new DisjunctiveLicenseSet(in.stream()
-                                          .toArray(AnyLicenseInfo[]::new));
+            AnyLicenseInfo[] members =
+                in.stream().toArray(AnyLicenseInfo[]::new);
+
+            Arrays.sort(members, Comparator.comparing(Objects::toString));
+
+            out = new DisjunctiveLicenseSet(members);
         }
 
         return out;
