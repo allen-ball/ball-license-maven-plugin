@@ -21,8 +21,6 @@ import org.spdx.rdfparser.license.SpdxNoneLicense;
 import static ball.maven.plugins.license.LicenseUtilityMethods.isFullySpdxListed;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
-import static org.spdx.compare.LicenseCompareHelper.matchingStandardLicenseIds;
-import static org.spdx.rdfparser.license.LicenseInfoFactory.parseSPDXLicenseString;
 
 /**
  * {@link AnyLicenseInfo} factory that caches previous calculations by
@@ -62,7 +60,7 @@ public class TextLicenseInfoParser extends TreeMap<ExtractedLicenseInfo,AnyLicen
      * document.  The result is saved associated with the text and the same
      * result will be returned for any subsequent call with the same text.
      *
-     * @param   resolver        The injected {@link LicenseResolver}.
+     * @param   resolver        The {@link LicenseResolver}.
      * @param   id              The observed license ID.
      * @param   document        The observed license {@link Document}.
      *
@@ -132,7 +130,7 @@ public class TextLicenseInfoParser extends TreeMap<ExtractedLicenseInfo,AnyLicen
 
         if (value == null && isNotBlank(key.getLicenseId())) {
             try {
-                value = parseSPDXLicenseString(key.getLicenseId());
+                value = resolver.parseLicenseString(key.getLicenseId());
             } catch (Exception exception) {
             }
 
@@ -144,22 +142,18 @@ public class TextLicenseInfoParser extends TreeMap<ExtractedLicenseInfo,AnyLicen
 
         if (value == null) {
             if (isNotBlank(key.getExtractedText())) {
-                try {
-                    String[] ids =
-                        matchingStandardLicenseIds(key.getExtractedText());
+                String[] ids =
+                    resolver.parseLicenseText(key.getExtractedText());
 
-                    if (ids.length > 0) {
-                        AnyLicenseInfo[] members =
-                            new AnyLicenseInfo[ids.length];
+                if (ids.length > 0) {
+                    AnyLicenseInfo[] members =
+                        new AnyLicenseInfo[ids.length];
 
-                        for (int i = 0; i < members.length; i += 1) {
-                            members[i] = parseSPDXLicenseString(ids[i]);
-                        }
-
-                        value = resolver.toLicense(Arrays.asList(members));
+                    for (int i = 0; i < members.length; i += 1) {
+                        members[i] = resolver.parseLicenseString(ids[i]);
                     }
-                } catch (Exception exception) {
-                    value = null;
+
+                    value = resolver.toLicense(Arrays.asList(members));
                 }
             }
 
