@@ -3,6 +3,7 @@ package ball.maven.plugins.license;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Objects;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -10,9 +11,12 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
+import org.spdx.compare.LicenseCompareHelper;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
 import org.spdx.rdfparser.license.DisjunctiveLicenseSet;
 import org.spdx.rdfparser.license.ExtractedLicenseInfo;
+import org.spdx.rdfparser.license.LicenseInfoFactory;
+import org.spdx.rdfparser.license.LicenseSet;
 
 /**
  * {@link AnyLicenseInfo} resolver with methods to parse, look-up, and
@@ -59,7 +63,7 @@ public class LicenseResolver {
      * Method to parse {@link URLLicenseInfo} and
      * {@link ExtractedLicenseInfo} ({@link TextLicenseInfo}) instances.
      *
-     * @param   in            The {@link AnyLicenseInfo} to resolve.
+     * @param   in              The {@link AnyLicenseInfo} to resolve.
      *
      * @return  Parsed {@link AnyLicenseInfo}.
      *
@@ -67,7 +71,16 @@ public class LicenseResolver {
     public AnyLicenseInfo parse(AnyLicenseInfo in) {
         AnyLicenseInfo out = in;
 
-        if (in instanceof URLLicenseInfo) {
+        if (in instanceof LicenseSet) {
+            List<AnyLicenseInfo> list =
+                Arrays.asList(((LicenseSet) in).getMembers());
+
+            for (int i = 0, n = list.size(); i < n; i += 1) {
+                list.set(i, parse(list.get(i)));
+            }
+
+            out = toLicense(list);
+        } else if (in instanceof URLLicenseInfo) {
             out = parse((URLLicenseInfo) in);
         } else if (in instanceof ExtractedLicenseInfo) {
             out = parse((ExtractedLicenseInfo) in);
@@ -97,6 +110,31 @@ public class LicenseResolver {
      */
     public AnyLicenseInfo parse(URLLicenseInfo in) {
         return urlLicenseInfoParser.parse(this, in);
+    }
+
+    protected AnyLicenseInfo parseLicenseString(String string) {
+        AnyLicenseInfo license = null;
+
+        try {
+            license = LicenseInfoFactory.parseSPDXLicenseString(string);
+        } catch (Exception exception) {
+            log.error(string + ": " + exception.getMessage());
+            throw new IllegalStateException(exception);
+        }
+
+        return license;
+    }
+
+    protected String[] parseLicenseText(String text) {
+        String[] ids = new String[] { };
+
+        try {
+            ids = LicenseCompareHelper.matchingStandardLicenseIds(text);
+        } catch (Exception exception) {
+            log.error(exception.getMessage(), exception);
+        }
+
+        return ids;
     }
 
     /**
