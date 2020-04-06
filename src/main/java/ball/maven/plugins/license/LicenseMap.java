@@ -94,13 +94,14 @@ public class LicenseMap extends TreeMap<String,License> {
         License value = super.get(key);
 
         if (value == null) {
-            if (key instanceof CharSequence) {
-                String string = key.toString();
+            if (key instanceof String) {
+                String string = ((String) key).trim();
 
                 value =
-                    Stream.of(string,
-                              string.replaceAll("[\\p{Space}]+", "-"))
-                    .map(t -> super.get(t))
+                    Stream.of(string.replaceAll("(?i)[\\p{Space}]+", "-"),
+                              string.replaceAll("(?i)(V(ERSION)?)[\\p{Space}]?([\\p{Digit}])", "$3"))
+                    .filter(t -> (! string.equals(t)))
+                    .map(t -> get(t))
                     .filter(Objects::nonNull)
                     .findFirst().orElse(null);
             }
