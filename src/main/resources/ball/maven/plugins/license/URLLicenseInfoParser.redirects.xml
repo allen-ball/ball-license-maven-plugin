@@ -2,6 +2,12 @@
 <!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
 <!-- $Id$ -->
 <properties>
+  <entry key="(?i)https?://www.apache.org/licenses/LICENSE-([0-9]+[.][0-9]+)([.][^.]+)?">
+    https://opensource.org/licenses/Apache-$1
+  </entry>
+  <entry key="(?i)https?://www.apache.org/licenses/">
+    https://opensource.org/licenses/Apache-2.0
+  </entry>
   <entry key="(?i)https?://github.com/([^/]+)/([^/]+)(/[^/]+)*/(LICENSE([.][^.]+)?)">
     https://raw.githubusercontent.com/$1/$2/master/$4
   </entry>

@@ -15,6 +15,7 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import javax.annotation.PostConstruct;
@@ -34,12 +35,13 @@ import org.jsoup.nodes.Document;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
 import org.spdx.rdfparser.license.ExtractedLicenseInfo;
 import org.spdx.rdfparser.license.License;
+import org.spdx.rdfparser.license.LicenseInfoFactory;
 
+import static ball.maven.plugins.license.LicenseUtilityMethods.isFullySpdxListed;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
-import static org.spdx.rdfparser.license.LicenseInfoFactory.parseSPDXLicenseString;
 
 /**
  * {@link URL} ({@link String} representation) to {@link AnyLicenseInfo}
@@ -111,16 +113,17 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
             Properties seeds = getXMLProperties("seeds");
 
             for (String id : seeds.stringPropertyNames()) {
-                try {
-                    AnyLicenseInfo value = parseSPDXLicenseString(id);
+                AnyLicenseInfo value =
+                    LicenseInfoFactory.parseSPDXLicenseString(id);
 
-                    Stream.of(seeds.getProperty(id)
-                              .trim().split("[\\p{Space}]+"))
-                        .filter(StringUtils::isNotBlank)
-                        .forEach(t -> putIfAbsent(t, value));
-                } catch (Exception exception) {
-                    log.warn(exception.getMessage(), exception);
+                if (! isFullySpdxListed(value)) {
+                    throw new IllegalArgumentException(id);
                 }
+
+                Stream.of(seeds.getProperty(id)
+                          .trim().split("[\\p{Space}]+"))
+                    .filter(StringUtils::isNotBlank)
+                    .forEach(t -> putIfAbsent(t, value));
             }
 
             redirects =
@@ -129,6 +132,7 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
                 .collect(toMap(k -> Pattern.compile(k.getKey().toString()),
                                v -> v.getValue().toString().trim()));
         } catch (Exception exception) {
+            log.error(exception.getMessage(), exception);
             throw new ExceptionInInitializerError(exception);
         }
     }
@@ -195,7 +199,7 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
 
             String canonicalURL = getCanonicalURL(connection);
 
-            if (isNotBlank(canonicalURL) && (! areEqualKeys(canonicalURL, url))) {
+            if (isNotBlank(canonicalURL) && (! equals(canonicalURL, url))) {
                 if (value == null) {
                     value = get(canonicalURL);
                 }
@@ -204,7 +208,7 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
             String redirectURL = getRedirectURL(connection);
 
             if (isNotBlank(redirectURL)) {
-                if (! areEqualKeys(redirectURL, url)) {
+                if (! equals(redirectURL, url)) {
                     if (value != null) {
                         put(redirectURL, value);
                     } else {
@@ -227,14 +231,17 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
                  * Heuristic: Look for a "canonical" <link/> with a known
                  * href.
                  */
-                value =
-                    document.select("head>link[rel='canonical'][href]")
-                    .stream()
-                    .map(t -> t.attr("abs:href"))
-                    .filter(StringUtils::isNotBlank)
-                    .filter(t -> (! areEqualKeys(t, url)))
-                    .map(t -> get(t))
-                    .findFirst().orElse(null);
+                if (value == null) {
+                    value =
+                        document.select("head>link[rel='canonical'][href]")
+                        .stream()
+                        .map(t -> t.attr("abs:href"))
+                        .filter(StringUtils::isNotBlank)
+                        .filter(t -> (! equals(t, url)))
+                        .map(t -> get(t))
+                        .filter(Objects::nonNull)
+                        .findFirst().orElse(null);
+                }
                 /*
                  * Heuristics to consider:
                  *
@@ -264,8 +271,9 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
         return value;
     }
 
-    private boolean areEqualKeys(String left, String right) {
-        return Objects.compare(left, right, comparator()) == 0;
+    private boolean equals(String left, String right) {
+        return (Objects.compare(left, right, comparator()) == 0
+                && Objects.compare(right, left, comparator()) == 0);
     }
 
     private String getCanonicalURL(URLConnection connection) {
@@ -280,8 +288,9 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
                     .map(t -> CANONICAL.matcher(t))
                     .filter(t -> t.find())
                     .map(t -> t.group(1))
-                    .map(t -> URI.create(connection.getURL().toString())
-                              .resolve(t).toASCIIString())
+                    .filter(StringUtils::isNotBlank)
+                    .map(t -> resolve((HttpURLConnection) connection, t))
+                    .map(t -> t.toASCIIString())
                     .findFirst().orElse(null);
             }
         }
@@ -301,21 +310,43 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
 
                 if (isNotBlank(location)) {
                     redirectURL =
-                        URI.create(url).resolve(location).toASCIIString();
+                        resolve((HttpURLConnection) connection, location)
+                        .toASCIIString();
                 }
             }
 
             if (isBlank(redirectURL)) {
-                redirectURL =
-                    redirects.entrySet()
-                    .stream()
-                    .filter(t -> t.getKey().matcher(url).matches())
-                    .map(t -> t.getKey().matcher(url).replaceFirst(t.getValue()))
-                    .findFirst().orElse(null);
+                for (Map.Entry<Pattern,String> entry : redirects.entrySet()) {
+                    Matcher matcher = entry.getKey().matcher(url);
+
+                    if (matcher.matches()) {
+                        redirectURL = matcher.replaceFirst(entry.getValue());
+
+                        if (isNotBlank(redirectURL)) {
+                            break;
+                        } else {
+                            redirectURL = null;
+                        }
+                    }
+                }
             }
         }
 
         return redirectURL;
+    }
+
+    private URI resolve(HttpURLConnection connection, String location) {
+        URI uri = URI.create(location);
+
+        if (! uri.isAbsolute()) {
+            try {
+                uri = connection.getURL().toURI().resolve(uri);
+            } catch (Exception exception) {
+                log.debug(exception.getMessage(), exception);
+            }
+        }
+
+        return uri;
     }
 
     @NoArgsConstructor @ToString
