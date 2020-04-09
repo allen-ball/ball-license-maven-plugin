@@ -5,12 +5,15 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Stream;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.nodes.Document;
+import org.jsoup.select.Elements;
 import org.spdx.compare.LicenseCompareHelper;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
 import org.spdx.rdfparser.license.DisjunctiveLicenseSet;
@@ -110,6 +113,42 @@ public class LicenseResolver {
      */
     public AnyLicenseInfo parse(URLLicenseInfo in) {
         return urlLicenseInfoParser.parse(this, in);
+    }
+
+    protected AnyLicenseInfo parse(Document document) {
+        AnyLicenseInfo license = null;
+        String[] ids = null;
+
+        if (document.documentType() != null) {
+            ids =
+                Stream.of("body .content p", "body main", "body p", "body")
+                .map(t -> document.select(t))
+                .filter(Elements::hasText)
+                .map(t -> t.text())
+                .distinct()
+                .map(t -> parseLicenseText(t))
+                .filter(t -> (t != null && t.length > 0))
+                .findFirst()
+                .orElse(parseLicenseText(document.body().wholeText()));
+        } else {
+            ids = parseLicenseText(document.text());
+        }
+
+        if (ids != null && ids.length > 0) {
+            AnyLicenseInfo[] members = new AnyLicenseInfo[ids.length];
+
+            for (int i = 0; i < members.length; i += 1) {
+                members[i] = parseLicenseString(ids[i]);
+            }
+
+            license = toLicense(Arrays.asList(members));
+        } else {
+            license =
+                new ExtractedLicenseInfo(document.location(),
+                                         document.wholeText());
+        }
+
+        return license;
     }
 
     protected AnyLicenseInfo parseLicenseString(String string) {
