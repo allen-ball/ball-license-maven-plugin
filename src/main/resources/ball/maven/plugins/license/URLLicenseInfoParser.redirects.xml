@@ -8,7 +8,4 @@
   <entry key="(?i)https?://www.apache.org/licenses/">
     https://opensource.org/licenses/Apache-2.0
   </entry>
-  <entry key="(?i)https?://github.com/([^/]+)/([^/]+)(/[^/]+)*/(LICENSE([.][^.]+)?)">
-    https://raw.githubusercontent.com/$1/$2/master/$4
-  </entry>
 </properties>

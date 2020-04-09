@@ -40,6 +40,7 @@ import org.spdx.rdfparser.license.LicenseInfoFactory;
 import static ball.maven.plugins.license.LicenseUtilityMethods.isFullySpdxListed;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
@@ -66,7 +67,6 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
         Pattern.compile("<([^>]*)>; rel=\"canonical\"");
 
     /** @serial */ private final LicenseMap map;
-    /** @serial */ private final TextLicenseInfoParser parser;
     /** @serial */ private final Map<Pattern,String> redirects;
 
     /**
@@ -76,11 +76,10 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
      * @param   parser          The injected {@link TextLicenseInfoParser}.
      */
     @Inject
-    public URLLicenseInfoParser(LicenseMap map, TextLicenseInfoParser parser) {
+    public URLLicenseInfoParser(LicenseMap map) {
         super(String.CASE_INSENSITIVE_ORDER);
 
         this.map = Objects.requireNonNull(map);
-        this.parser = Objects.requireNonNull(parser);
 
         try {
             for (License value : map.values()) {
@@ -193,6 +192,11 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
         try {
             URLConnection connection = new URL(url).openConnection();
 
+            if (connection instanceof HttpURLConnection) {
+                ((HttpURLConnection) connection)
+                    .setInstanceFollowRedirects(false);
+            }
+
             if (connection instanceof HttpsURLConnection) {
                 ((HttpsURLConnection) connection).setHostnameVerifier(NONE);
             }
@@ -224,8 +228,10 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
 
                 try (InputStream in = connection.getInputStream()) {
                     document = Jsoup.parse(in, null, url);
-                    document.outputSettings()
-                        .syntax(Document.OutputSettings.Syntax.xml);
+                    /*
+                     * document.outputSettings()
+                     *     .syntax(Document.OutputSettings.Syntax.xml);
+                     */
                 }
                 /*
                  * Heuristic: Look for a "canonical" <link/> with a known
@@ -254,14 +260,18 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
                  * Parse the document if the heuristics fail.
                  */
                 if (value == null) {
-                    value = parser.parse(resolver, url, document);
+                    value = resolver.parse(document);
                 }
             }
         } catch (FileNotFoundException exception) {
             log.debug("File not found: " + url);
         } catch (Exception exception) {
             log.warn("Cannot read " + url);
-            log.debug(exception.getMessage());
+            log.debug(exception.getMessage(), exception);
+        } finally {
+            if (value == null) {
+                value = new TextLicenseInfo(url, EMPTY, url);
+            }
         }
 
         if (value instanceof ExtractedLicenseInfo) {
@@ -312,6 +322,8 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
                     redirectURL =
                         resolve((HttpURLConnection) connection, location)
                         .toASCIIString();
+log.debug("url: " + url);
+log.debug("location: " + redirectURL);
                 }
             }
 

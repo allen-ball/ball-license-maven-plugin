@@ -32,7 +32,6 @@ import org.spdx.rdfparser.license.LicenseSet;
 @Slf4j
 public class LicenseResolver {
     /** @serial */ private final LicenseMap licenseMap;
-    /** @serial */ private final TextLicenseInfoParser textLicenseInfoParser;
     /** @serial */ private final URLLicenseInfoParser urlLicenseInfoParser;
 
     /**
@@ -41,19 +40,14 @@ public class LicenseResolver {
      * @param   licenseMap      The injected {@link LicenseMap}.
      * @param   urlLicenseInfoParser
      *                          The injected {@link URLLicenseInfoParser}.
-     * @param   textLicenseInfoParser
-     *                          The injected {@link TextLicenseInfoParser}.
      */
     @Inject
     public LicenseResolver(LicenseMap licenseMap,
-                           URLLicenseInfoParser urlLicenseInfoParser,
-                           TextLicenseInfoParser textLicenseInfoParser) {
+                           URLLicenseInfoParser urlLicenseInfoParser) {
         this.licenseMap =
             Objects.requireNonNull(licenseMap);
         this.urlLicenseInfoParser =
             Objects.requireNonNull(urlLicenseInfoParser);
-        this.textLicenseInfoParser =
-            Objects.requireNonNull(textLicenseInfoParser);
     }
 
     @PostConstruct
@@ -90,18 +84,6 @@ public class LicenseResolver {
         }
 
         return out;
-    }
-
-    /**
-     * Method to parse {@link ExtractedLicenseInfo}
-     * ({@link TextLicenseInfo}) instances.
-     *
-     * @param   in            The {@link ExtractedLicenseInfo} to resolve.
-     *
-     * @return  Parsed {@link AnyLicenseInfo}.
-     */
-    public AnyLicenseInfo parse(ExtractedLicenseInfo in) {
-        return textLicenseInfoParser.parse(this, in);
     }
 
     /**
@@ -144,8 +126,9 @@ public class LicenseResolver {
             license = toLicense(Arrays.asList(members));
         } else {
             license =
-                new ExtractedLicenseInfo(document.location(),
-                                         document.wholeText());
+                new TextLicenseInfo(document.location(),
+                                    document.wholeText(),
+                                    document.location());
         }
 
         return license;
