@@ -322,8 +322,6 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
                     redirectURL =
                         resolve((HttpURLConnection) connection, location)
                         .toASCIIString();
-log.debug("url: " + url);
-log.debug("location: " + redirectURL);
                 }
             }
 
