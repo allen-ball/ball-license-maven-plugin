@@ -8,4 +8,22 @@
   <entry key="(?i)https?://www.apache.org/licenses/">
     https://opensource.org/licenses/Apache-2.0
   </entry>
+  <entry key="(?i)https?://www.bouncycastle.org/licence.html">
+    https://opensource.org/licenses/MIT
+  </entry>
+  <entry key="(?i)https?://creativecommons.org/publicdomain/zero/1.0/">
+    https://spdx.org/licenses/CC0-1.0
+  </entry>
+  <entry key="(?i)https?://www.eclipse.org/org/documents/edl-v10.php">
+    https://opensource.org/licenses/BSD-3-Clause
+  </entry>
+  <entry key="(?i)https?://www.gnu.org/licenses/old-licenses/([A-Z]+-[0-9]+[.][0-9]+).html">
+    https://opensource.org/licenses/$1
+  </entry>
+  <entry key="(?i)https?://jsoup.org/license">
+    https://opensource.org/licenses/MIT
+  </entry>
+  <entry key="(?i)http://www.linfo.org/bsdlicense.html">
+    https://opensource.org/licenses/BSD-3-Clause
+  </entry>
 </properties>
