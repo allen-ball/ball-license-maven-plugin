@@ -2,9 +2,13 @@
 <!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
 <!-- $Id$ -->
 <properties>
+  <entry key="Apache-2.0">
+    http://www.ehcache.org/src/assemble/EHCACHE-CORE-LICENSE.txt
+  </entry>
   <entry key="BSD-3-Clause">
     https://www.antlr.org/license.html
     http://www.jcraft.com/jsch/LICENSE.txt
+    http://unitsofmeasurement.github.io/LICENSE.txt
   </entry>
   <entry key="CDDL-1.0">
     https://glassfish.dev.java.net/public/CDDLv1.0.html
@@ -14,6 +18,9 @@
   </entry>
   <entry key="MPL-1.0">
     https://www.mozilla.org/MPL/MPL-1.0.txt
+  </entry>
+  <entry key="Unicode-DFS-2016">
+    http://source.icu-project.org/repos/icu/trunk/icu4j/main/shared/licenses/LICENSE
   </entry>
   <entry key="W3C">
     http://www.w3.org/TR/2004/REC-DOM-Level-3-Core-20040407/java-binding.zip
