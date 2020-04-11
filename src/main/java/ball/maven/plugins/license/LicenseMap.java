@@ -16,6 +16,8 @@ import org.spdx.rdfparser.license.License;
 /* import org.spdx.rdfparser.license.ListedExceptions; */
 import org.spdx.rdfparser.license.ListedLicenses;
 
+import static org.apache.commons.lang3.StringUtils.SPACE;
+
 /**
  * {@link java.util.Map} implementation that relates SPDX ID and known
  * aliases to {@link License} sourced from
@@ -72,6 +74,8 @@ public class LicenseMap extends TreeMap<String,License> {
                 if (containsKey(spdx)) {
                     Stream.of(node.at("/id").asText(),
                               node.at("/name").asText())
+                        .map(t -> t.trim())
+                        .map(t -> t.replaceAll("[\\p{Space}]+", SPACE))
                         .filter(StringUtils::isNotBlank)
                         .forEach(t -> computeIfAbsent(t, k -> get(spdx)));
                 }
