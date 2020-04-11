@@ -8,11 +8,13 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.Charset;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
@@ -30,19 +32,24 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.entity.ContentType;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
 import org.spdx.rdfparser.license.ExtractedLicenseInfo;
 import org.spdx.rdfparser.license.License;
 import org.spdx.rdfparser.license.LicenseInfoFactory;
 
 import static ball.maven.plugins.license.LicenseUtilityMethods.isFullySpdxListed;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
+import static org.apache.http.entity.ContentType.TEXT_PLAIN;
 
 /**
  * {@link URL} ({@link String} representation) to {@link AnyLicenseInfo}
@@ -89,10 +96,6 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
                     value);
                 put(String.format("https://spdx.org/licenses/%s.html", id),
                     value);
-
-                for (String key : value.getSeeAlso()) {
-                    put(key, value);
-                }
             }
 
             for (JsonNode node :
@@ -119,11 +122,27 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
                     throw new IllegalArgumentException(id);
                 }
 
-                Stream.of(seeds.getProperty(id)
-                          .trim().split("[\\p{Space}]+"))
+                Stream.of(seeds.getProperty(id).split("[\\p{Space}]+"))
                     .filter(StringUtils::isNotBlank)
-                    .forEach(t -> putIfAbsent(t, value));
+                    .forEach(t -> putIfAbsent(t.trim(), value));
             }
+
+            for (License value : map.values()) {
+                for (String key : value.getSeeAlso()) {
+                    if (isNotBlank(key)) {
+                        putIfAbsent(key.trim(), value);
+                    }
+                }
+            }
+
+            Set<String> set =
+                keySet().stream()
+                .filter(t -> t.startsWith("https:"))
+                .collect(toSet());
+
+            set.stream()
+                .forEach(t -> computeIfAbsent(t.replace("https:", "http:"),
+                                              k -> get(t)));
 
             redirects =
                 getXMLProperties("redirects").entrySet()
@@ -139,8 +158,7 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
     private Properties getXMLProperties(String name) throws Exception {
         Properties properties = new Properties();
         String resource =
-            String.format("%1$s.%2$s.xml",
-                          getClass().getSimpleName(), name);
+            String.format("%1$s.%2$s.xml", getClass().getSimpleName(), name);
 
         try (InputStream in = getClass().getResourceAsStream(resource)) {
             properties.loadFromXML(in);
@@ -188,9 +206,10 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
 
     private AnyLicenseInfo compute(LicenseResolver resolver, String url) {
         AnyLicenseInfo value = null;
+        URLConnection connection = null;
 
         try {
-            URLConnection connection = new URL(url).openConnection();
+            connection = new URL(url).openConnection();
 
             if (connection instanceof HttpURLConnection) {
                 ((HttpURLConnection) connection)
@@ -224,50 +243,88 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
             }
 
             if (value == null) {
-                Document document = null;
+                ContentType type =
+                    ContentType.parse(connection.getContentType());
+                Charset charset =
+                    (type.getCharset() != null) ? type.getCharset() : UTF_8;
 
-                try (InputStream in = connection.getInputStream()) {
-                    document = Jsoup.parse(in, null, url);
-                    /*
-                     * document.outputSettings()
-                     *     .syntax(Document.OutputSettings.Syntax.xml);
-                     */
-                }
-                /*
-                 * Heuristic: Look for a "canonical" <link/> with a known
-                 * href.
-                 */
-                if (value == null) {
-                    value =
-                        document.select("head>link[rel='canonical'][href]")
-                        .stream()
-                        .map(t -> t.attr("abs:href"))
-                        .filter(StringUtils::isNotBlank)
-                        .filter(t -> (! equals(t, url)))
-                        .map(t -> get(t))
-                        .filter(Objects::nonNull)
-                        .findFirst().orElse(null);
-                }
-                /*
-                 * Heuristics to consider:
-                 *
-                 * Search for SPDX-License-Identifier
-                 *
-                 * If a single href of http://opensource.org/licenses/([^/])
-                 * is found and $1 is in the LicenseMap
-                 */
-                /*
-                 * Parse the document if the heuristics fail.
-                 */
-                if (value == null) {
-                    value = resolver.parse(document);
+                if (type.getMimeType().matches("(?i).*(html|xml).*")) {
+                    try (InputStream in = connection.getInputStream()) {
+                        Document document =
+                            Jsoup.parse(in, charset.name(), url);
+
+                        document.outputSettings()
+                            .syntax(Document.OutputSettings.Syntax.xml);
+                        /*
+                         * Heuristic: Look for a "canonical" <link/> with a
+                         * known href.
+                         */
+                        if (value == null) {
+                            value =
+                                document.select("head>link[rel='canonical'][href]")
+                                .stream()
+                                .map(t -> t.attr("abs:href"))
+                                .filter(StringUtils::isNotBlank)
+                                .map(t -> get(t))
+                                .filter(Objects::nonNull)
+                                .findFirst().orElse(null);
+                        }
+                        /*
+                         * Heuristics to consider:
+                         *
+                         * Search for SPDX-License-Identifier
+                         *
+                         * If a single href of
+                         * http://opensource.org/licenses/([^/]) is found
+                         * and $1 is in the LicenseMap
+                         */
+                        /*
+                         * Parse the document if the heuristics fail.
+                         */
+                        if (value == null) {
+                            value =
+                                Stream.of("content, .content, #content",
+                                          "main, .main, #main",
+                                          "body, .body, #body")
+                                .map(t -> document.select(t))
+                                .flatMap(Elements::stream)
+                                .filter(Element::hasText)
+                                .map(t -> t.text())
+                                .distinct()
+                                .map(t -> new TextLicenseInfo(url, t, url))
+                                .map(t -> resolver.parse(t))
+                                .filter(Objects::nonNull)
+                                .filter(t -> (! (t instanceof ExtractedLicenseInfo)))
+                                .findFirst()
+                                .orElse(null);
+                        }
+
+                        if (value == null) {
+                            value =
+                                new TextLicenseInfo(url,
+                                                    document.wholeText(), url);
+                            value = resolver.parse(value);
+                        }
+                    }
+                } else {
+                    try (InputStream in = connection.getInputStream();
+                         Scanner scanner = new Scanner(in, charset.name())) {
+                        String text = scanner.useDelimiter("\\A").next();
+
+                        value = new TextLicenseInfo(url, text, url);
+                        value = resolver.parse(value);
+                    }
                 }
             }
         } catch (FileNotFoundException exception) {
             log.debug("File not found: " + url);
         } catch (Exception exception) {
             log.warn("Cannot read " + url);
-            log.debug(exception.getMessage(), exception);
+
+            if (connection != null) {
+                connection.getHeaderFields().entrySet().stream()
+                    .forEach(t -> log.debug(String.valueOf(t)));
+            }
         } finally {
             if (value == null) {
                 value = new TextLicenseInfo(url, EMPTY, url);

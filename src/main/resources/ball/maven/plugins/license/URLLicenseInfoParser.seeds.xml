@@ -6,18 +6,26 @@
     http://www.ehcache.org/src/assemble/EHCACHE-CORE-LICENSE.txt
   </entry>
   <entry key="BSD-3-Clause">
-    https://www.antlr.org/license.html
-    http://www.jcraft.com/jsch/LICENSE.txt
     http://unitsofmeasurement.github.io/LICENSE.txt
+    http://www.eclipse.org/org/documents/edl-v10.php
+    http://www.jcraft.com/jsch/LICENSE.txt
+    https://www.adobe.com/devnet/xmp/library/eula-xmp-library-java.html
+    https://www.antlr.org/license.html
   </entry>
   <entry key="CDDL-1.0">
     https://glassfish.dev.java.net/public/CDDLv1.0.html
+    https://repository.jboss.org/licenses/cddl.txt
   </entry>
-  <entry key="GPL-2.0 WITH Classpath-exception-2.0">
-    http://www.gnu.org/software/classpath/license.html
+  <entry key="CDDL-1.1 AND GPL-2.0-with-classpath-exception">
+    https://oss.oracle.com/licenses/CDDL+GPL-1.1
+  </entry>
+  <entry key="MIT">
+    https://jsoup.org/license
+    https://www.bouncycastle.org/licence.html
   </entry>
   <entry key="MPL-1.0">
     https://www.mozilla.org/MPL/MPL-1.0.txt
+    https://www.mozilla.org/en-US/MPL/MPL-1.0.txt
   </entry>
   <entry key="Unicode-DFS-2016">
     http://source.icu-project.org/repos/icu/trunk/icu4j/main/shared/licenses/LICENSE
