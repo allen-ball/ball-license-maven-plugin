@@ -95,21 +95,9 @@ public class ArtifactModelCache extends TreeMap<Artifact,Model> {
         if (model == null) {
             try {
                 model = reader.read(file, null);
-
-                if (model.getLicenses() == null || model.getLicenses().isEmpty()) {
-                    ProjectBuildingRequest request =
-                        new DefaultProjectBuildingRequest(session.getProjectBuildingRequest())
-                        .setValidationLevel(VALIDATION_LEVEL_MINIMAL)
-                        .setResolveDependencies(false)
-                        .setProcessPlugins(false);
-
-                    model =
-                        builder.build(file, request)
-                        .getProject().getModel();
-                }
             } catch (Exception exception) {
                 log.debug("Cannot read POM for " + artifact);
-                log.debug(exception.getMessage(), exception);
+                /* log.debug(exception.getMessage(), exception); */
             }
 
             if (model != null
@@ -127,7 +115,7 @@ public class ArtifactModelCache extends TreeMap<Artifact,Model> {
                         .getProject().getModel();
                 } catch (Exception exception) {
                     log.debug("Cannot load POM for " + artifact);
-                    log.debug(exception.getMessage(), exception);
+                    /* log.debug(exception.getMessage(), exception); */
                 }
             }
         }
