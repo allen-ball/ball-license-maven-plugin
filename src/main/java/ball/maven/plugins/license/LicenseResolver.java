@@ -5,15 +5,12 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Stream;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
-import org.jsoup.nodes.Document;
-import org.jsoup.select.Elements;
 import org.spdx.compare.LicenseCompareHelper;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
 import org.spdx.rdfparser.license.DisjunctiveLicenseSet;
@@ -79,8 +76,8 @@ public class LicenseResolver {
             out = toLicense(list);
         } else if (in instanceof URLLicenseInfo) {
             out = parse((URLLicenseInfo) in);
-        } else if (in instanceof ExtractedLicenseInfo) {
-            out = parse((ExtractedLicenseInfo) in);
+        } else if (in instanceof TextLicenseInfo) {
+            out = parse((TextLicenseInfo) in);
         }
 
         return out;
@@ -97,41 +94,20 @@ public class LicenseResolver {
         return urlLicenseInfoParser.parse(this, in);
     }
 
-    protected AnyLicenseInfo parse(Document document) {
-        AnyLicenseInfo license = null;
-        String[] ids = null;
+    private AnyLicenseInfo parse(TextLicenseInfo in) {
+        String[] ids = parseLicenseText(in.getExtractedText());
+        AnyLicenseInfo out = toLicense(ids);
 
-        if (document.documentType() != null) {
-            ids =
-                Stream.of("body .content p", "body main", "body p", "body")
-                .map(t -> document.select(t))
-                .filter(Elements::hasText)
-                .map(t -> t.text())
-                .distinct()
-                .map(t -> parseLicenseText(t))
-                .filter(t -> (t != null && t.length > 0))
-                .findFirst()
-                .orElse(parseLicenseText(document.body().wholeText()));
-        } else {
-            ids = parseLicenseText(document.text());
+        if (out == null) {
+            out =
+                new ExtractedLicenseInfo(in.getLicenseId(),
+                                         in.getExtractedText());
+
+            TextLicenseInfo.addSeeAlso((ExtractedLicenseInfo) out,
+                                       in.getSeeAlso());
         }
 
-        if (ids != null && ids.length > 0) {
-            AnyLicenseInfo[] members = new AnyLicenseInfo[ids.length];
-
-            for (int i = 0; i < members.length; i += 1) {
-                members[i] = parseLicenseString(ids[i]);
-            }
-
-            license = toLicense(Arrays.asList(members));
-        } else {
-            license =
-                new TextLicenseInfo(document.location(),
-                                    document.wholeText(),
-                                    document.location());
-        }
-
-        return license;
+        return out;
     }
 
     protected AnyLicenseInfo parseLicenseString(String string) {
@@ -140,8 +116,6 @@ public class LicenseResolver {
         try {
             license = LicenseInfoFactory.parseSPDXLicenseString(string);
         } catch (Exception exception) {
-            log.error(string + ": " + exception.getMessage());
-            throw new IllegalStateException(exception);
         }
 
         return license;
@@ -153,7 +127,6 @@ public class LicenseResolver {
         try {
             ids = LicenseCompareHelper.matchingStandardLicenseIds(text);
         } catch (Exception exception) {
-            log.error(exception.getMessage(), exception);
         }
 
         return ids;
@@ -179,8 +152,23 @@ public class LicenseResolver {
                 in.stream().toArray(AnyLicenseInfo[]::new);
 
             Arrays.sort(members, Comparator.comparing(Objects::toString));
-
             out = new DisjunctiveLicenseSet(members);
+        }
+
+        return out;
+    }
+
+    private AnyLicenseInfo toLicense(String[] ids) {
+        AnyLicenseInfo out = null;
+
+        if (ids != null && ids.length > 0) {
+            AnyLicenseInfo[] members = new AnyLicenseInfo[ids.length];
+
+            for (int i = 0; i < members.length; i += 1) {
+                members[i] = parseLicenseString(ids[i]);
+            }
+
+            out = toLicense(Arrays.asList(members));
         }
 
         return out;
