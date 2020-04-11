@@ -91,6 +91,7 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
 
     /** @serial */ private final MavenSession session;
     /** @serial */ private final ArtifactModelCache cache;
+    /** @serial */ private final LicenseMap map;
     /** @serial */ private final LicenseResolver resolver;
     /** @serial */ private final File file;
     /** @serial */ private final Properties catalog = new Properties();
@@ -100,17 +101,19 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
      *
      * @param   session         The injected {@link MavenSession}.
      * @param   cache           The injected {@link ArtifactModelCache}.
+     * @param   map             The injected {@link LicenseMap}.
      * @param   resolver        The injected {@link LicenseResolver}.
      */
     @Inject
     public ArtifactLicenseCatalog(MavenSession session,
                                   ArtifactModelCache cache,
-                                  LicenseResolver resolver) {
+                                  LicenseMap map, LicenseResolver resolver) {
         super(Comparator.comparing(ArtifactUtils::key,
                                    String.CASE_INSENSITIVE_ORDER));
 
         this.session = Objects.requireNonNull(session);
         this.cache = Objects.requireNonNull(cache);
+        this.map = Objects.requireNonNull(map);
         this.resolver = Objects.requireNonNull(resolver);
         this.file =
             new File(session.getLocalRepository().getBasedir(), CATALOG);
@@ -181,23 +184,22 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
          * Licenses specified in the Manifest Bundle-License
          * or found in the Artifact
          */
-        List<AnyLicenseInfo> specified = Collections.emptyList();
+        List<AnyLicenseInfo> bundle = Collections.emptyList();
         List<AnyLicenseInfo> scanned = Collections.emptyList();
 
         try (JarFile jar =
                  ((JarURLConnection) url.openConnection()).getJarFile()) {
-            specified =
+            bundle =
                 Stream.of(jar.getManifest())
                 .filter(Objects::nonNull)
                 .map(t -> t.getMainAttributes().getValue("Bundle-License"))
                 .filter(StringUtils::isNotBlank)
                 .flatMap(t -> Stream.of(t.split(",")))
                 .map(t -> t.trim())
+                .distinct()
                 .map(t -> Pattern.compile("((.+);link=)?(.*)").matcher(t))
                 .filter(t -> t.matches())
-                .map(t -> new URLLicenseInfo(isNotBlank(t.group(2)) ? t.group(2) : t.group(3),
-                                             resolve(url, t.group(3))))
-                .map(t -> resolver.parse(t))
+                .map(t -> parse(t.group(2), resolve(url, t.group(3))))
                 .collect(toList());
 
             scanned =
@@ -205,8 +207,7 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
                 .map(JarEntry::getName)
                 .filter(t -> INCLUDE.matcher(t).matches())
                 .filter(t -> (! EXCLUDE.matcher(t).matches()))
-                .map(t -> new URLLicenseInfo(t, resolve(url, t)))
-                .map(t -> resolver.parse(t))
+                .map(t -> parse(t, resolve(url, t)))
                 .filter(t -> (! (t instanceof URLLicenseInfo)))
                 .collect(toList());
         } catch (ZipException exception) {
@@ -220,56 +221,41 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
             .filter(LicenseUtilityMethods::isFullySpdxListed)
             .collect(toMap(k -> k.toString(), v -> v, (t, u) -> t));
         /*
-         * Examine licenses specified in the Artifact's POM if the Manifest
-         * Bundle-License is not completely specified
+         * Licenses specified in the Artifact's POM
          */
-        if (! isFullySpecified(specified)) {
-            Model model = cache.get(artifact);
+        Model model = cache.get(artifact);
+        List<AnyLicenseInfo> pom =
+            Stream.of(model.getLicenses())
+            .filter(Objects::nonNull)
+            .flatMap(List::stream)
+            .distinct()
+            .map(t -> parse(t.getName().replaceAll(",", ""),
+                            resolve(toURL(model.getUrl()), t.getUrl())))
+            .collect(toList());
 
-            List<AnyLicenseInfo> pom =
-                Stream.of(model.getLicenses())
-                .filter(Objects::nonNull)
-                .flatMap(List::stream)
-                .map(t -> new URLLicenseInfo(t.getName().replaceAll(",", ""),
-                                             resolve(toURL(model.getUrl()),
-                                                     t.getUrl())))
-                .map(t -> resolver.parse(t))
-                .collect(toList());
-
-            if (specified.isEmpty() || isFullySpecified(pom)) {
-                specified = pom;
-            }
-        }
-
-        if (specified.isEmpty() && found.isEmpty()) {
+        if (bundle.isEmpty() && pom.isEmpty() && found.isEmpty()) {
             log.warn(artifact + ": No license(s) specified or found");
         }
 
-        List<AnyLicenseInfo> licenses = specified.stream().collect(toList());
+        List<AnyLicenseInfo> licenses = bundle.stream().collect(toList());
 
-        if (licenses.isEmpty()) {
-            licenses.addAll(found.values());
+        if (! isFullySpecified(licenses)) {
+            if (licenses.isEmpty() || isFullySpecified(pom)) {
+                licenses.clear();
+                licenses.addAll(pom);
+            }
         }
-/*
-        if (found.size() >= specified.size()
-            || countOf(found.values()) == countOf(specified)) {
+
+        if ((! isFullySpecified(licenses)) && found.size() >= licenses.size()) {
             licenses.clear();
             licenses.addAll(found.values());
-        } else {
-            licenses.clear();
-
-            licenses =
-                IntStream.range(0, parsed.size())
-                .mapToObj(t -> Arrays.asList(specified.get(t), parsed.get(t)))
-                .peek(t -> t.sort(SIEVE))
-                .map(t -> t.get(0))
-                .collect(toList());
         }
-*/
+
         if ((! licenses.isEmpty()) && (! isFullySpecified(licenses))) {
             log.debug("------------------------------------------------------------");
             log.debug(String.valueOf(url));
-            log.debug("  Bundle/POM: " + specified);
+            log.debug("      Bundle: " + bundle);
+            log.debug("         POM: " + pom);
             log.debug("     Scanned: " + scanned);
             log.debug("       Found: " + found.values());
             log.debug("  License(s): " + licenses);
@@ -345,6 +331,28 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
         }
 
         return isAbsolute;
+    }
+
+    private AnyLicenseInfo parse(String id, String... urls) {
+        AnyLicenseInfo option0 = isNotBlank(id) ? map.get(id) : null;
+        AnyLicenseInfo option1 = null;
+
+        try {
+            option1 = isNotBlank(id) ? resolver.parseLicenseString(id) : null;
+        } catch (Exception exception) {
+        }
+
+        AnyLicenseInfo option2 =
+            new URLLicenseInfo(isNotBlank(id) ? id : urls[0], urls);
+        AnyLicenseInfo[] options =
+            Stream.of(option0, option1, option2)
+            .filter(Objects::nonNull)
+            .map(t -> resolver.parse(t))
+            .toArray(AnyLicenseInfo[]::new);
+
+        Arrays.sort(options, SIEVE);
+
+        return (options.length > 0) ? options[0] : null;
     }
 
     private int countOf(Collection<? extends AnyLicenseInfo> collection) {
