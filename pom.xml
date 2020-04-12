@@ -28,7 +28,7 @@
   <description></description>
   <groupId>ball</groupId>
   <artifactId>ball-license-maven-plugin</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <version>1.0.0</version>
   <packaging>maven-plugin</packaging>
   <parent>
     <groupId>ball</groupId>
