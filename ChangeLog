@@ -1,3 +1,8 @@
+2020-04-11  Allen D. Ball  <ball@hcf.dev>
+
+	* src/main/java/ball/maven/plugins/license/ArtifactLicenseCatalog.java:
+	Seed from classpath:artifact-license-catalog.xml.
+
 2020-04-03  Allen D. Ball  <ball@hcf.dev>
 
 	* src/main/java/ball/maven/plugins/license/ArtifactLicenseCatalog.java:

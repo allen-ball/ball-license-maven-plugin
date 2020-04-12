@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.JarURLConnection;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -127,14 +128,21 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
             } catch (IOException exception) {
                 log.error("Cannot read " + file);
             }
-
-            for (String key : catalog.stringPropertyNames()) {
-                try {
-                    put(new KeyArtifact(key),
-                        resolver.parseLicenseString(catalog.getProperty(key)));
-                } catch (Exception exception) {
-                    log.error(key + ": " + exception.getMessage(), exception);
+        } else {
+            try (InputStream in = getClass().getResourceAsStream(CATALOG)) {
+                if (in != null) {
+                    catalog.loadFromXML(in);
                 }
+            } catch (IOException exception) {
+            }
+        }
+
+        for (String key : catalog.stringPropertyNames()) {
+            try {
+                put(new KeyArtifact(key),
+                    resolver.parseLicenseString(catalog.getProperty(key)));
+            } catch (Exception exception) {
+                log.error(key + ": " + exception.getMessage(), exception);
             }
         }
     }
@@ -253,6 +261,7 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
 
         if ((! licenses.isEmpty()) && (! isFullySpecified(licenses))) {
             log.debug("------------------------------------------------------------");
+            log.debug(ArtifactUtils.key(artifact));
             log.debug(String.valueOf(url));
             log.debug("      Bundle: " + bundle);
             log.debug("         POM: " + pom);
