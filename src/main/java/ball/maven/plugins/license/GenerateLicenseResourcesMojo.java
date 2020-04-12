@@ -6,6 +6,8 @@ import java.io.PrintWriter;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +31,8 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
+import org.spdx.rdfparser.license.ConjunctiveLicenseSet;
+import org.spdx.rdfparser.license.LicenseSet;
 import org.spdx.rdfparser.license.OrLaterOperator;
 import org.spdx.rdfparser.license.WithExceptionOperator;
 
@@ -37,6 +41,7 @@ import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 import static java.nio.file.StandardOpenOption.WRITE;
 import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
@@ -74,7 +79,7 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
         Comparator
         .<AnyLicenseInfo>comparingInt(t -> LicenseUtilityMethods.countOf(t))
         .reversed()
-        .thenComparing(t -> Objects.toString(t, EMPTY))
+        .thenComparing(t -> toString(t))
         .thenComparingInt(t -> (t instanceof OrLaterOperator) ? -1 : 1)
         .thenComparingInt(t -> (t instanceof WithExceptionOperator) ? -1 : 1);
     private static final Comparator<Model> MODEL_ORDER =
@@ -82,6 +87,7 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
         .<Model,String>comparing(t -> Objects.toString(t.getName(), EMPTY))
         .thenComparing(t -> Objects.toString(t.getUrl(), EMPTY))
         .thenComparingInt(t -> isBlank(t.getName()) ? Objects.hashCode(t) : 0);
+
     @Parameter(defaultValue = "${project.build.outputDirectory}",
                property = "license.resources.directory")
     private File directory = null;
@@ -156,27 +162,29 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                                          .newBufferedWriter(target,
                                                             CREATE, WRITE,
                                                             TRUNCATE_EXISTING))) {
-                    out.println(target.getFileName());
+                    String boundary =
+                        String.join(EMPTY, Collections.nCopies(78, "-"));
+
+                    out.println(boundary);
+                    out.println(target.getFileName()
+                                + " " + project.getArtifact());
+                    out.println(boundary);
 
                     for (Map.Entry<AnyLicenseInfo,Map<Model,List<Tuple>>> section :
                              report.entrySet()) {
-                        boolean first =
-                            report.comparator()
-                            .compare(report.firstKey(), section.getKey()) == 0;
-                        boolean last =
-                            report.comparator()
-                            .compare(report.lastKey(), section.getKey()) == 0;
+                        out.println(boundary);
+                        out.println(toString(section.getKey()));
+                        out.println(boundary);
 
-                        if (! first) {
-                            out.println();
-                        }
-
-                        out.println();
-                        out.println(section.getKey());
+                        boolean first = true;
 
                         for (Map.Entry<Model,List<Tuple>> group :
                                  section.getValue().entrySet()) {
-                            out.println();
+                            if (first) {
+                                first = false;
+                            } else {
+                                out.println();
+                            }
 
                             if (isNotBlank(group.getKey().getName())) {
                                 out.println(group.getKey().getName());
@@ -190,6 +198,8 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                                 out.println(group.getKey().getUrl());
                             }
                         }
+
+                        out.println(boundary);
                     }
                 }
             } else {
@@ -228,6 +238,25 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
         }
 
         return scope;
+    }
+
+    private static String toString(AnyLicenseInfo license) {
+        String string = null;
+
+        if (license instanceof LicenseSet) {
+            AnyLicenseInfo[] members = ((LicenseSet) license).getMembers();
+
+            Arrays.sort(members, Comparator.comparing(Objects::toString));
+
+            string =
+                Stream.of(members)
+                .map(Objects::toString)
+                .collect(joining((license instanceof ConjunctiveLicenseSet) ? " AND " : " OR "));
+        } else {
+            string = Objects.toString(license, EMPTY);
+        }
+
+        return string;
     }
 
     @AllArgsConstructor @Getter @ToString
