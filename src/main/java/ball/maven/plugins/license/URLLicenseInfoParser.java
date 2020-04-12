@@ -101,7 +101,6 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
      * Sole constructor.
      *
      * @param   map             The injected {@link LicenseMap}.
-     * @param   parser          The injected {@link TextLicenseInfoParser}.
      */
     @Inject
     public URLLicenseInfoParser(LicenseMap map) {
