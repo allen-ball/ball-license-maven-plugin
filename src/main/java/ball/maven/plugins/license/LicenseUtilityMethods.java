@@ -21,7 +21,18 @@ package ball.maven.plugins.license;
  * limitations under the License.
  * ##########################################################################
  */
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.Objects;
+import java.util.Spliterator;
+import java.util.Spliterators.AbstractSpliterator;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
@@ -51,8 +62,7 @@ public abstract class LicenseUtilityMethods {
      * @return  A {@link Stream}.
      */
     public static Stream<AnyLicenseInfo> walk(AnyLicenseInfo root) {
-        return Walker.<AnyLicenseInfo>walk(root,
-                                           LicenseUtilityMethods::childrenOf);
+        return walk(root, LicenseUtilityMethods::childrenOf);
     }
 
     /**
@@ -60,12 +70,12 @@ public abstract class LicenseUtilityMethods {
      *
      * @param   node            The {@link AnyLicenseInfo}.
      *
-     * @return  A possibly non-empty {@link AnyLicenseInfo AnyLicenseInfo[]}
-     *          for a {@link LicenseSet}, {@link OrLaterOperator},
-     *          or {@link WithExceptionOperator} node; an empty array
-     *          otherwise.
+     * @return  A {@link Collection} of {@link AnyLicenseInfo} for a
+     *          {@link LicenseSet}, {@link OrLaterOperator}, or
+     *          {@link WithExceptionOperator} node; an empty
+     *          {@link Collection} otherwise.
      */
-    public static AnyLicenseInfo[] childrenOf(AnyLicenseInfo node) {
+    public static Collection<AnyLicenseInfo> childrenOf(AnyLicenseInfo node) {
         AnyLicenseInfo[] children = null;
 
         if (node instanceof LicenseSet) {
@@ -84,7 +94,7 @@ public abstract class LicenseUtilityMethods {
             children = new AnyLicenseInfo[] { };
         }
 
-        return children;
+        return Arrays.asList(children);
     }
 
     /**
@@ -207,5 +217,57 @@ public abstract class LicenseUtilityMethods {
             .reduce(Boolean::logicalOr).orElse(false);
 
         return partiallySpecified;
+    }
+
+    private static <T> Stream<T> walk(T root,
+                                      Function<? super T,Collection<? extends T>> childrenOf) {
+        Walker<T> walker =
+            new Walker<>(Collections.singleton(root), childrenOf);
+
+        return StreamSupport.stream(walker, false);
+    }
+
+    private static class Walker<T> extends AbstractSpliterator<T> {
+        private final Stream<Supplier<Walker<T>>> stream;
+        private Iterator<Supplier<Walker<T>>> iterator = null;
+        private Spliterator<? extends T> spliterator = null;
+
+        private Walker(Collection<? extends T> nodes,
+                       Function<? super T,Collection<? extends T>> childrenOf) {
+            super(Long.MAX_VALUE, IMMUTABLE | NONNULL);
+
+            stream =
+                nodes.stream()
+                .filter(Objects::nonNull)
+                .map(childrenOf)
+                .filter(Objects::nonNull)
+                .map(t -> (() -> new Walker<T>(t, childrenOf)));
+            spliterator =
+                nodes.stream()
+                .filter(Objects::nonNull)
+                .spliterator();
+        }
+
+        @Override
+        public boolean tryAdvance(Consumer<? super T> consumer) {
+            boolean accepted = false;
+
+            if (spliterator != null) {
+                accepted = spliterator.tryAdvance(consumer);
+            }
+
+            if (! accepted) {
+                if (iterator == null) {
+                    iterator = stream.iterator();
+                }
+
+                if (iterator.hasNext()) {
+                    spliterator = iterator.next().get();
+                    accepted = tryAdvance(consumer);
+                }
+            }
+
+            return accepted;
+        }
     }
 }
