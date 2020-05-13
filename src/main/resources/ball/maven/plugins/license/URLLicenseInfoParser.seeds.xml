@@ -30,6 +30,9 @@
     https://www.mozilla.org/MPL/MPL-1.0.txt
     https://www.mozilla.org/en-US/MPL/MPL-1.0.txt
   </entry>
+  <entry key="Plexus">
+    https://raw.githubusercontent.com/dom4j/dom4j/master/LICENSE
+  </entry>
   <entry key="Unicode-DFS-2016">
     http://source.icu-project.org/repos/icu/trunk/icu4j/main/shared/licenses/LICENSE
   </entry>
