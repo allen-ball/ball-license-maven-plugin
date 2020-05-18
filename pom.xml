@@ -28,12 +28,12 @@
   <description></description>
   <groupId>ball</groupId>
   <artifactId>ball-license-maven-plugin</artifactId>
-  <version>1.0.1</version>
+  <version>1.0.2</version>
   <packaging>maven-plugin</packaging>
   <parent>
     <groupId>ball</groupId>
     <artifactId>parent</artifactId>
-    <version>20200513.0</version>
+    <version>20200514-SNAPSHOT</version>
     <relativePath>../ball/parent/pom.xml</relativePath>
   </parent>
   <inceptionYear>2020</inceptionYear>
