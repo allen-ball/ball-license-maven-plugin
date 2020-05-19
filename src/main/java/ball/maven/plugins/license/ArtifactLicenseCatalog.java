@@ -142,8 +142,7 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
             new File(session.getLocalRepository().getBasedir(), CATALOG);
     }
 
-    @PostConstruct
-    public void init() {
+    protected void load() {
         if (file.exists()) {
             try (FileInputStream in = new FileInputStream(file)) {
                 catalog.loadFromXML(in);
@@ -169,11 +168,8 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
         }
     }
 
-    @PreDestroy
-    public void destroy() {
-        log.debug(getClass().getSimpleName() + ".size() = " + size());
-
-        boolean changed = (! file.exists());
+    protected void flush() {
+        boolean dirty = (! file.exists());
 
         for (Map.Entry<Artifact,AnyLicenseInfo> entry : entrySet()) {
             AnyLicenseInfo license = entry.getValue();
@@ -182,17 +178,28 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
                 String key = ArtifactUtils.key(entry.getKey());
                 String value = license.toString();
 
-                changed |= (! Objects.equals(value, catalog.put(key, value)));
+                dirty |= (! Objects.equals(value, catalog.put(key, value)));
             }
         }
 
-        if (changed) {
+        if (dirty) {
             try (FileOutputStream out = new FileOutputStream(file)) {
                 catalog.storeToXML(out, file.getName());
             } catch (IOException exception) {
                 log.warn("Cannot write " + file);
             }
         }
+    }
+
+    @PostConstruct
+    public void init() {
+        load();
+    }
+
+    @PreDestroy
+    public void destroy() {
+        flush();
+        log.debug(getClass().getSimpleName() + ".size() = " + size());
     }
 
     @Override

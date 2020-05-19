@@ -209,6 +209,7 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
          */
         if (license != null) {
             catalog.put(project.getArtifact(), license);
+            catalog.flush();
         }
     }
 }

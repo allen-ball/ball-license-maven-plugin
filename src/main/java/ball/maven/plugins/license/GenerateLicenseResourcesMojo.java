@@ -240,6 +240,8 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                 throw new MojoExecutionException(throwable.getMessage(),
                                                  throwable);
             }
+        } finally {
+            catalog.flush();
         }
     }
 
