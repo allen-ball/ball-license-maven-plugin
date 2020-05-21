@@ -1,5 +1,4 @@
 package ball.maven.plugins.license;
-
 /*-
  * ##########################################################################
  * License Maven Plugin
@@ -57,7 +56,9 @@ import static org.spdx.compare.LicenseCompareHelper.isTextStandardLicense;
  * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
  * @version $Revision$
  */
-@Mojo(name = "update-project-license", defaultPhase = INITIALIZE, requiresProject = true)
+@Mojo(name = "update-project-license",
+      configurator = "license-mojo-component-configurator",
+      defaultPhase = INITIALIZE, requiresProject = true)
 @NoArgsConstructor @ToString @Slf4j
 public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
 
@@ -86,7 +87,7 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
 
     @Inject private MavenProject project = null;
     @Inject private ArtifactLicenseCatalog catalog = null;
-    @Inject private LicenseResolver resolver;
+    @Inject private LicenseResolver resolver = null;
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {

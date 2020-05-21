@@ -1,5 +1,4 @@
 package ball.maven.plugins.license;
-
 /*-
  * ##########################################################################
  * License Maven Plugin
@@ -21,7 +20,6 @@ package ball.maven.plugins.license;
  * limitations under the License.
  * ##########################################################################
  */
-
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -81,7 +79,9 @@ import static org.apache.maven.plugins.annotations.ResolutionScope.TEST;
  * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
  * @version $Revision$
  */
-@Mojo(name = "generate-license-resources", requiresDependencyResolution = TEST,
+@Mojo(name = "generate-license-resources",
+      configurator = "license-mojo-component-configurator",
+      requiresDependencyResolution = TEST,
       defaultPhase = GENERATE_RESOURCES, requiresProject = true)
 @NoArgsConstructor @ToString @Slf4j
 public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
@@ -121,6 +121,7 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
     private String excludeScope = EXCLUDE_SCOPE;
 
     @Inject private MavenProject project = null;
+    @Inject private LicenseResolver resolver = null;
     @Inject private ArtifactLicenseCatalog catalog = null;
     @Inject private ArtifactModelCache cache = null;
 
