@@ -1,6 +1,8 @@
-2020-05-19  Allen D. Ball  <ball@hcf.dev>
+2020-05-21  Allen D. Ball  <ball@hcf.dev>
 
-	* src/main/java/ball/maven/plugins/license/Selection.java:
+	* src/main/java/ball/maven/plugins/license/LicenseConverter.java,
+	src/main/java/ball/maven/plugins/license/LicenseMojoComponentConfigurator.java,
+	src/main/java/ball/maven/plugins/license/Selection.java:
 	Initial writing.
 
 2020-05-18  Allen D. Ball  <ball@hcf.dev>

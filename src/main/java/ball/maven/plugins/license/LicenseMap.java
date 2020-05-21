@@ -1,5 +1,4 @@
 package ball.maven.plugins.license;
-
 /*-
  * ##########################################################################
  * License Maven Plugin

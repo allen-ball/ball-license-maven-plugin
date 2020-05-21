@@ -20,17 +20,29 @@ package ball.maven.plugins.license;
  * limitations under the License.
  * ##########################################################################
  */
-import lombok.Data;
-import org.spdx.rdfparser.license.AnyLicenseInfo;
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import javax.inject.Named;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
+import org.codehaus.plexus.component.configurator.BasicComponentConfigurator;
 
 /**
- * {@code <selection/>} parameter.
+ * License Mojo
+ * {@link org.codehaus.plexus.component.configurator.ComponentConfigurator}.
  *
  * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
  * @version $Revision$
  */
-@Data
-public class Selection {
-    private String artifact = null;
-    private AnyLicenseInfo license = null;
+@Named("license-mojo-component-configurator")
+@NoArgsConstructor @ToString @Slf4j
+public class LicenseMojoComponentConfigurator extends BasicComponentConfigurator {
+    @PostConstruct
+    public void init() {
+        converterLookup.registerConverter(new LicenseConverter());
+    }
+
+    @PreDestroy
+    public void destroy() { }
 }

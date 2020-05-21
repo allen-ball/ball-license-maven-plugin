@@ -1,5 +1,4 @@
 package ball.maven.plugins.license;
-
 /*-
  * ##########################################################################
  * License Maven Plugin
@@ -21,7 +20,6 @@ package ball.maven.plugins.license;
  * limitations under the License.
  * ##########################################################################
  */
-
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
