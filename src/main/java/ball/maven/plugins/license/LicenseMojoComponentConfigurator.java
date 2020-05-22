@@ -23,6 +23,7 @@ package ball.maven.plugins.license;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.inject.Named;
+import javax.inject.Singleton;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -35,7 +36,7 @@ import org.codehaus.plexus.component.configurator.BasicComponentConfigurator;
  * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
  * @version $Revision$
  */
-@Named("license-mojo-component-configurator")
+@Named("license-mojo-component-configurator") @Singleton
 @NoArgsConstructor @ToString @Slf4j
 public class LicenseMojoComponentConfigurator extends BasicComponentConfigurator {
     @PostConstruct

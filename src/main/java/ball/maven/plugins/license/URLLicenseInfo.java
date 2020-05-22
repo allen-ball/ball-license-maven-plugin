@@ -27,6 +27,8 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
  * URL {@link org.spdx.rdfparser.license.ExtractedLicenseInfo}
  * implementation.
  *
+ * {@bean.info}
+ *
  * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
  * @version $Revision$
  */

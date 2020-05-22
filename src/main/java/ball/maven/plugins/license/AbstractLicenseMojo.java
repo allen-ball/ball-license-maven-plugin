@@ -45,8 +45,8 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
 import org.spdx.rdfparser.license.ExtractedLicenseInfo;
 
-import static lombok.AccessLevel.PROTECTED;
 import static java.util.stream.Collectors.toSet;
+import static lombok.AccessLevel.PROTECTED;
 
 /**
  * Abstract base class for license {@link org.apache.maven.plugin.Mojo}s.

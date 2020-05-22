@@ -26,6 +26,8 @@ import org.spdx.rdfparser.license.AnyLicenseInfo;
 /**
  * {@code <selection/>} parameter.
  *
+ * {@bean.info}
+ *
  * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
  * @version $Revision$
  */
