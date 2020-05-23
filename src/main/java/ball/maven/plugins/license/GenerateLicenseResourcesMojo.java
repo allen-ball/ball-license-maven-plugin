@@ -124,7 +124,7 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
     private String excludeScope = EXCLUDE_SCOPE;
 
     @Parameter(required = false)
-    private List<Selection> selections = null;
+    private Selection[] selections = null;
 
     @Inject private MavenProject project = null;
     @Inject private ArtifactLicenseCatalog catalog = null;
@@ -299,8 +299,8 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
     private class Selections extends TreeMap<String,AnyLicenseInfo> {
         {
             if (selections != null) {
-                selections.stream()
-                    .forEach(t -> put(t.getArtifact(), t.getLicense()));
+                Stream.of(selections)
+                    .forEach(t -> put(t.getKey(), t.getValue()));
             }
         }
 

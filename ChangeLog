@@ -1,5 +1,8 @@
 2020-05-23  Allen D. Ball  <ball@hcf.dev>
 
+	* src/main/java/ball/maven/plugins/license/GenerateLicenseResourcesMojo.java:
+	Use T[] instead of List<T> for @Parameter definition.
+
 	* src/main/java/ball/maven/plugins/license/Selection.java:
 	Implement Map.Entry.
 
