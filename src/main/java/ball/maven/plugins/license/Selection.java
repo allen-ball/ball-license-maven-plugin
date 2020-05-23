@@ -20,6 +20,7 @@ package ball.maven.plugins.license;
  * limitations under the License.
  * ##########################################################################
  */
+import java.util.Map;
 import lombok.Data;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
 
@@ -32,7 +33,18 @@ import org.spdx.rdfparser.license.AnyLicenseInfo;
  * @version $Revision$
  */
 @Data
-public class Selection {
+public class Selection implements Map.Entry<String,AnyLicenseInfo> {
     private String artifact = null;
     private AnyLicenseInfo license = null;
+
+    @Override
+    public String getKey() { return artifact; }
+
+    @Override
+    public AnyLicenseInfo getValue() { return license; }
+
+    @Override
+    public AnyLicenseInfo setValue(AnyLicenseInfo value) {
+        throw new UnsupportedOperationException();
+    }
 }

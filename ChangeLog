@@ -1,3 +1,8 @@
+2020-05-23  Allen D. Ball  <ball@hcf.dev>
+
+	* src/main/java/ball/maven/plugins/license/Selection.java:
+	Implement Map.Entry.
+
 2020-05-22  Allen D. Ball  <ball@hcf.dev>
 
 	* Added <selections/> support to generate-license-resources.
