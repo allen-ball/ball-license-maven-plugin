@@ -20,6 +20,7 @@ package ball.maven.plugins.license;
  * limitations under the License.
  * ##########################################################################
  */
+import java.util.Objects;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import org.codehaus.plexus.component.configurator.ComponentConfigurationException;
@@ -39,7 +40,9 @@ public class LicenseConverter extends AbstractBasicConverter {
     private static final Class<?> TYPE = AnyLicenseInfo.class;
 
     @Override
-    public boolean canConvert(Class<?> type) { return type.equals(TYPE); }
+    public boolean canConvert(Class<?> type) {
+        return Objects.equals(TYPE, type);
+    }
 
     @Override
     public Object fromString(String string) throws ComponentConfigurationException {
