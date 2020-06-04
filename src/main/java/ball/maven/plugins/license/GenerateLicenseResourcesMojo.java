@@ -297,6 +297,8 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
      */
     @NoArgsConstructor
     private class Selections extends TreeMap<String,AnyLicenseInfo> {
+        private static final long serialVersionUID = 4229926081116865138L;
+
         {
             if (selections != null) {
                 Stream.of(selections)

@@ -30,6 +30,7 @@ import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.spdx.compare.LicenseCompareHelper;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
@@ -46,7 +47,7 @@ import org.spdx.rdfparser.license.LicenseSet;
  * @version $Revision$
  */
 @Named @Singleton
-@Slf4j
+@ToString @Slf4j
 public class LicenseResolver {
     /** @serial */ private final LicenseMap licenseMap;
     /** @serial */ private final URLLicenseInfoParser urlLicenseInfoParser;

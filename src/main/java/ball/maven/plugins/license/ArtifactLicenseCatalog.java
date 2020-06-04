@@ -88,6 +88,8 @@ import static org.apache.maven.artifact.ArtifactUtils.key;
 @Named @Singleton
 @Slf4j
 public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
+    private static final long serialVersionUID = -7887839577334232433L;
+
     private static final String CATALOG = "artifact-license-catalog.xml";
 
     private static final Pattern INCLUDE =

@@ -226,6 +226,7 @@ public abstract class LicenseUtilityMethods {
         return StreamSupport.stream(walker, false);
     }
 
+    @ToString
     private static class Walker<T> extends AbstractSpliterator<T> {
         private final Stream<Supplier<Walker<T>>> stream;
         private Iterator<Supplier<Walker<T>>> iterator = null;

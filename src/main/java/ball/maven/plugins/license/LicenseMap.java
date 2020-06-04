@@ -49,6 +49,8 @@ import static org.apache.commons.lang3.StringUtils.SPACE;
 @Named @Singleton
 @Slf4j
 public class LicenseMap extends TreeMap<String,License> {
+    private static final long serialVersionUID = 8959458091372664080L;
+
     private static final ListedLicenses LICENSES =
         ListedLicenses.getListedLicenses();
     /*

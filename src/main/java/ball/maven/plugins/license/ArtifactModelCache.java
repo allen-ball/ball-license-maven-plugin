@@ -51,6 +51,8 @@ import static org.apache.maven.model.building.ModelBuildingRequest.VALIDATION_LE
 @Named @Singleton
 @Slf4j
 public class ArtifactModelCache extends TreeMap<Artifact,Model> {
+    private static final long serialVersionUID = 5197054494150680897L;
+
     public static final Comparator<Artifact> ORDER =
         Comparator
         .comparing(Artifact::getGroupId)
