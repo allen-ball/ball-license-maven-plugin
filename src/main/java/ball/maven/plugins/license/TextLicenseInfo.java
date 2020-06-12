@@ -1,5 +1,4 @@
 package ball.maven.plugins.license;
-
 /*-
  * ##########################################################################
  * License Maven Plugin
@@ -32,6 +31,8 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 /**
  * {@link ExtractedLicenseInfo} implementation.
+ *
+ * {@bean.info}
  *
  * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
  * @version $Revision$

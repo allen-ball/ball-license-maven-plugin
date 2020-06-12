@@ -1,12 +1,3 @@
-/**
- * ball-license-maven-plugin {@link org.apache.maven.plugin.Mojo}s.
- *
- * {@maven.plugin.help}
- *
- * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
- * @version $Revision$
- */
-@Retain
 package ball.maven.plugins.license;
 /*-
  * ##########################################################################
@@ -29,3 +20,31 @@ package ball.maven.plugins.license;
  * limitations under the License.
  * ##########################################################################
  */
+import java.util.Map;
+import lombok.Data;
+import org.spdx.rdfparser.license.AnyLicenseInfo;
+
+/**
+ * {@code <selection/>} parameter.
+ *
+ * {@bean.info}
+ *
+ * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
+ * @version $Revision$
+ */
+@Data
+public class Selection implements Map.Entry<String,AnyLicenseInfo> {
+    private String artifact = null;
+    private AnyLicenseInfo license = null;
+
+    @Override
+    public String getKey() { return artifact; }
+
+    @Override
+    public AnyLicenseInfo getValue() { return license; }
+
+    @Override
+    public AnyLicenseInfo setValue(AnyLicenseInfo value) {
+        throw new UnsupportedOperationException();
+    }
+}

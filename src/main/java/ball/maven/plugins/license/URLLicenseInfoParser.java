@@ -1,5 +1,4 @@
 package ball.maven.plugins.license;
-
 /*-
  * ##########################################################################
  * License Maven Plugin
@@ -83,6 +82,8 @@ import static org.apache.http.entity.ContentType.TEXT_PLAIN;
 @Named @Singleton
 @Slf4j
 public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
+    private static final long serialVersionUID = -1086861055455360074L;
+
     private static final HostnameVerifier NONE = new HostnameVerifierImpl();
 
     private static final Set<Integer> REDIRECT_CODES =

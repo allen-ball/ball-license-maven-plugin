@@ -1,5 +1,4 @@
 package ball.maven.plugins.license;
-
 /*-
  * ##########################################################################
  * License Maven Plugin
@@ -21,7 +20,6 @@ package ball.maven.plugins.license;
  * limitations under the License.
  * ##########################################################################
  */
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -48,6 +46,7 @@ import java.util.function.Function;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -89,6 +88,8 @@ import static org.apache.maven.artifact.ArtifactUtils.key;
 @Named @Singleton
 @Slf4j
 public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
+    private static final long serialVersionUID = -7887839577334232433L;
+
     private static final String CATALOG = "artifact-license-catalog.xml";
 
     private static final Pattern INCLUDE =
@@ -142,8 +143,7 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
             new File(session.getLocalRepository().getBasedir(), CATALOG);
     }
 
-    @PostConstruct
-    public void init() {
+    protected void load() {
         if (file.exists()) {
             try (FileInputStream in = new FileInputStream(file)) {
                 catalog.loadFromXML(in);
@@ -169,11 +169,8 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
         }
     }
 
-    @PreDestroy
-    public void destroy() {
-        log.debug(getClass().getSimpleName() + ".size() = " + size());
-
-        boolean changed = (! file.exists());
+    protected void flush() {
+        boolean dirty = (! file.exists());
 
         for (Map.Entry<Artifact,AnyLicenseInfo> entry : entrySet()) {
             AnyLicenseInfo license = entry.getValue();
@@ -182,17 +179,28 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
                 String key = ArtifactUtils.key(entry.getKey());
                 String value = license.toString();
 
-                changed |= (! Objects.equals(value, catalog.put(key, value)));
+                dirty |= (! Objects.equals(value, catalog.put(key, value)));
             }
         }
 
-        if (changed) {
+        if (dirty) {
             try (FileOutputStream out = new FileOutputStream(file)) {
                 catalog.storeToXML(out, file.getName());
             } catch (IOException exception) {
                 log.warn("Cannot write " + file);
             }
         }
+    }
+
+    @PostConstruct
+    public void init() {
+        load();
+    }
+
+    @PreDestroy
+    public void destroy() {
+        flush();
+        log.debug(getClass().getSimpleName() + ".size() = " + size());
     }
 
     @Override
@@ -219,6 +227,8 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
 
         try (JarFile jar =
                  ((JarURLConnection) url.openConnection()).getJarFile()) {
+            Pattern pattern = Pattern.compile("((?<id>.+);link=)?(?<url>.*)");
+
             bundle =
                 Stream.of(jar.getManifest())
                 .filter(Objects::nonNull)
@@ -227,9 +237,9 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
                 .flatMap(t -> Stream.of(t.split(",")))
                 .map(t -> t.trim())
                 .distinct()
-                .map(t -> Pattern.compile("((.+);link=)?(.*)").matcher(t))
-                .filter(t -> t.matches())
-                .map(t -> parse(t.group(2), resolve(url, t.group(3))))
+                .map(pattern::matcher)
+                .filter(Matcher::matches)
+                .map(t -> parse(t.group("id"), resolve(url, t.group("url"))))
                 .collect(toList());
 
             scanned =

@@ -1,12 +1,3 @@
-/**
- * ball-license-maven-plugin {@link org.apache.maven.plugin.Mojo}s.
- *
- * {@maven.plugin.help}
- *
- * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
- * @version $Revision$
- */
-@Retain
 package ball.maven.plugins.license;
 /*-
  * ##########################################################################
@@ -29,3 +20,30 @@ package ball.maven.plugins.license;
  * limitations under the License.
  * ##########################################################################
  */
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import javax.inject.Named;
+import javax.inject.Singleton;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
+import org.codehaus.plexus.component.configurator.BasicComponentConfigurator;
+
+/**
+ * License Mojo
+ * {@link org.codehaus.plexus.component.configurator.ComponentConfigurator}.
+ *
+ * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
+ * @version $Revision$
+ */
+@Named("license-mojo-component-configurator") @Singleton
+@NoArgsConstructor @ToString @Slf4j
+public class LicenseMojoComponentConfigurator extends BasicComponentConfigurator {
+    @PostConstruct
+    public void init() {
+        converterLookup.registerConverter(new LicenseConverter());
+    }
+
+    @PreDestroy
+    public void destroy() { }
+}

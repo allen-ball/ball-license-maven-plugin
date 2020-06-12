@@ -1,5 +1,4 @@
 package ball.maven.plugins.license;
-
 /*-
  * ##########################################################################
  * License Maven Plugin
@@ -21,7 +20,6 @@ package ball.maven.plugins.license;
  * limitations under the License.
  * ##########################################################################
  */
-
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -37,6 +35,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import javax.inject.Inject;
 import lombok.AllArgsConstructor;
@@ -46,6 +45,8 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.model.Model;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -81,7 +82,9 @@ import static org.apache.maven.plugins.annotations.ResolutionScope.TEST;
  * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
  * @version $Revision$
  */
-@Mojo(name = "generate-license-resources", requiresDependencyResolution = TEST,
+@Mojo(name = "generate-license-resources",
+      configurator = "license-mojo-component-configurator",
+      requiresDependencyResolution = TEST,
       defaultPhase = GENERATE_RESOURCES, requiresProject = true)
 @NoArgsConstructor @ToString @Slf4j
 public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
@@ -120,6 +123,9 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
     @Parameter(defaultValue = EXCLUDE_SCOPE, property = "license.excludeScope")
     private String excludeScope = EXCLUDE_SCOPE;
 
+    @Parameter(required = false)
+    private Selection[] selections = null;
+
     @Inject private MavenProject project = null;
     @Inject private ArtifactLicenseCatalog catalog = null;
     @Inject private ArtifactModelCache cache = null;
@@ -130,12 +136,13 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
             String packaging = project.getPackaging();
 
             if (ARCHIVE_PACKAGING.contains(packaging)) {
+                Selections selections = new Selections();
                 Set<String> scope = getScope();
                 List<Tuple> list =
                     project.getArtifacts()
                     .stream()
                     .filter(t -> scope.contains(t.getScope()))
-                    .map(t -> new Tuple(catalog.get(t), cache.get(t), t))
+                    .map(t -> new Tuple(selections.get(t), cache.get(t), t))
                     .collect(toList());
                 /*
                  * LICENSE
@@ -240,16 +247,19 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                 throw new MojoExecutionException(throwable.getMessage(),
                                                  throwable);
             }
+        } finally {
+            catalog.flush();
         }
     }
 
     private Set<String> getScope() {
+        Pattern pattern = Pattern.compile("[\\p{Punct}\\p{Space}]+");
         TreeSet<String> scope =
-            Stream.of(includeScope.split("[\\p{Punct}\\p{Space}]+"))
+            pattern.splitAsStream(includeScope)
             .filter(StringUtils::isNotBlank)
             .collect(toCollection(() -> new TreeSet<>(String.CASE_INSENSITIVE_ORDER)));
 
-        Stream.of(excludeScope.split("[\\p{Punct}\\p{Space}]+"))
+        pattern.splitAsStream(excludeScope)
             .filter(StringUtils::isNotBlank)
             .forEach(t -> scope.remove(t));
 
@@ -279,6 +289,47 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
         }
 
         return string;
+    }
+
+    /**
+     * {@link Selection}s @{@link Parameter} {@link Map}.  Dispatches to
+     * {@link #catalog} if no license is specified.
+     */
+    @NoArgsConstructor
+    private class Selections extends TreeMap<String,AnyLicenseInfo> {
+        private static final long serialVersionUID = 4229926081116865138L;
+
+        {
+            if (selections != null) {
+                Stream.of(selections)
+                    .forEach(t -> put(t.getKey(), t.getValue()));
+            }
+        }
+
+        @Override
+        public AnyLicenseInfo get(Object key) {
+            AnyLicenseInfo value = null;
+
+            if (key instanceof Artifact) {
+                Artifact artifact = (Artifact) key;
+
+                if (value == null) {
+                    value = get(ArtifactUtils.key(artifact));
+                }
+
+                if (value == null) {
+                    value = get(ArtifactUtils.versionlessKey(artifact));
+                }
+
+                if (value == null) {
+                    value = catalog.get(artifact);
+                }
+            } else {
+                value = super.get(key);
+            }
+
+            return value;
+        }
     }
 
     @AllArgsConstructor @Getter @ToString

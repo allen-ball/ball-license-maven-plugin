@@ -1,3 +1,38 @@
+2020-06-12  Allen D. Ball  <ball@hcf.dev>
+
+	* pom.xml: Released version 1.1.0.
+
+2020-05-23  Allen D. Ball  <ball@hcf.dev>
+
+	* src/main/java/ball/maven/plugins/license/GenerateLicenseResourcesMojo.java:
+	Use T[] instead of List<T> for @Parameter definition.
+
+	* src/main/java/ball/maven/plugins/license/Selection.java:
+	Implement Map.Entry.
+
+2020-05-22  Allen D. Ball  <ball@hcf.dev>
+
+	* Added <selections/> support to generate-license-resources.
+
+2020-05-21  Allen D. Ball  <ball@hcf.dev>
+
+	* src/main/java/ball/maven/plugins/license/GenerateLicenseResourcesMojo.java,
+	src/main/java/ball/maven/plugins/license/UpdateProjectLicenseMojo.java:
+	Configure @Mojo configurator = "license-mojo-component-configurator".
+
+	* src/main/java/ball/maven/plugins/license/ArtifactLicenseCatalog.java:
+	Compile Pattern outside Stream pipeline.
+
+	* src/main/java/ball/maven/plugins/license/LicenseConverter.java,
+	src/main/java/ball/maven/plugins/license/LicenseMojoComponentConfigurator.java,
+	src/main/java/ball/maven/plugins/license/Selection.java:
+	Initial writing.
+
+2020-05-18  Allen D. Ball  <ball@hcf.dev>
+
+	* Flush artifact-license-catalog.xml for each module in
+	multi-module builds.
+
 2020-05-13  Allen D. Ball  <ball@hcf.dev>
 
 	* pom.xml: Released version 1.0.1.
