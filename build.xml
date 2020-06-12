@@ -12,8 +12,8 @@
 
   <resolver:resolve>
     <dependencies>
-      <dependency coords="ball:parent:20200514-SNAPSHOT:xml:compile"/>
-      <dependency coords="ball:ball-util:5.0-SNAPSHOT:compile"/>
+      <dependency coords="ball:parent:20200612.0:xml:compile"/>
+      <dependency coords="ball:ball-util:5.0.0:compile"/>
     </dependencies>
     <properties/>
   </resolver:resolve>
