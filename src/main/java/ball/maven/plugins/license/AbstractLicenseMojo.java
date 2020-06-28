@@ -56,6 +56,10 @@ import static lombok.AccessLevel.PROTECTED;
  */
 @NoArgsConstructor(access = PROTECTED) @ToString @Slf4j
 public abstract class AbstractLicenseMojo extends AbstractMojo {
+    @Parameter(property = "license.skip")
+    @Getter
+    private boolean skip = false;
+
     @Parameter(defaultValue = "${basedir}/LICENSE",
                property = "license.file", readonly = true)
     @Getter

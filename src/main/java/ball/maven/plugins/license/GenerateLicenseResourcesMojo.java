@@ -88,6 +88,8 @@ import static org.apache.maven.plugins.annotations.ResolutionScope.TEST;
       defaultPhase = GENERATE_RESOURCES, requiresProject = true)
 @NoArgsConstructor @ToString @Slf4j
 public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
+    private static final String DEPENDENCIES = "DEPENDENCIES";
+
     private static final String COMPILE = "compile";
     private static final String PROVIDED = "provided";
     private static final String RUNTIME = "runtime";
@@ -133,106 +135,115 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         try {
-            String packaging = project.getPackaging();
+            if (! isSkip()) {
+                String packaging = project.getPackaging();
 
-            if (ARCHIVE_PACKAGING.contains(packaging)) {
-                Selections selections = new Selections();
-                Set<String> scope = getScope();
-                List<Tuple> list =
-                    project.getArtifacts()
-                    .stream()
-                    .filter(t -> scope.contains(t.getScope()))
-                    .map(t -> new Tuple(selections.get(t), cache.get(t), t))
-                    .collect(toList());
-                /*
-                 * LICENSE
-                 */
-                File file = getFile();
+                if (ARCHIVE_PACKAGING.contains(packaging)) {
+                    Selections selections = new Selections();
+                    Set<String> scope = getScope();
+                    List<Tuple> list =
+                        project.getArtifacts()
+                        .stream()
+                        .filter(t -> scope.contains(t.getScope()))
+                        .map(t -> new Tuple(selections.get(t),
+                                            cache.get(t), t))
+                        .collect(toList());
+                    /*
+                     * LICENSE
+                     */
+                    File file = getFile();
 
-                if (file.exists() && file.isDirectory()) {
-                    throw new FileAlreadyExistsException(file.toString(), null,
-                                                         "Is not a file or link");
-                }
-
-                if (directory.exists() && (! directory.isDirectory())) {
-                    throw new FileAlreadyExistsException(directory.toString(), null,
-                                                         "Is not a directory");
-                }
-
-                Path source = file.toPath();
-                Path target = directory.toPath().resolve(source.getFileName());
-
-                Files.createDirectories(directory.toPath());
-                Files.copy(file.toPath(), target, REPLACE_EXISTING);
-                Files.setLastModifiedTime(target,
-                                          Files.getLastModifiedTime(source));
-                /*
-                 * DEPENDENCIES
-                 *
-                 * Report sort order:
-                 *      Licenses (LICENSE_ORDER)
-                 *      Model[name, url] (same if name is not blank)
-                 *      Artifacts (ArtifactModelCache.ORDER)
-                 */
-                TreeMap<AnyLicenseInfo,Map<Model,List<Tuple>>> report =
-                    list.stream()
-                    .collect(groupingBy(Tuple::getLicense,
-                                        () -> new TreeMap<>(LICENSE_ORDER),
-                                        groupingBy(Tuple::getModel,
-                                                   () -> new TreeMap<>(MODEL_ORDER),
-                                                   toList())));
-
-                warnIfExtractedLicenseInfo(report.keySet().stream());
-
-                target = directory.toPath().resolve("DEPENDENCIES");
-
-                try (PrintWriter out =
-                         new PrintWriter(Files
-                                         .newBufferedWriter(target,
-                                                            CREATE, WRITE,
-                                                            TRUNCATE_EXISTING))) {
-                    String boundary =
-                        String.join(EMPTY, Collections.nCopies(78, "-"));
-
-                    out.println(boundary);
-                    out.println(target.getFileName()
-                                + " " + project.getArtifact());
-                    out.println(boundary);
-
-                    for (Map.Entry<AnyLicenseInfo,Map<Model,List<Tuple>>> section :
-                             report.entrySet()) {
-                        out.println(boundary);
-                        out.println(toString(section.getKey()));
-                        out.println(boundary);
-
-                        boolean first = true;
-
-                        for (Map.Entry<Model,List<Tuple>> group :
-                                 section.getValue().entrySet()) {
-                            if (first) {
-                                first = false;
-                            } else {
-                                out.println();
-                            }
-
-                            if (isNotBlank(group.getKey().getName())) {
-                                out.println(group.getKey().getName());
-                            }
-
-                            for (Tuple tuple : group.getValue()) {
-                                out.println(tuple.getArtifact());
-                            }
-
-                            if (isNotBlank(group.getKey().getUrl())) {
-                                out.println(group.getKey().getUrl());
-                            }
-                        }
-
-                        out.println(boundary);
+                    if (file.exists() && file.isDirectory()) {
+                        throw new FileAlreadyExistsException(file.toString(),
+                                                             null,
+                                                             "Is not a file or link");
                     }
+
+                    if (directory.exists() && (! directory.isDirectory())) {
+                        throw new FileAlreadyExistsException(directory.toString(),
+                                                             null,
+                                                             "Is not a directory");
+                    }
+
+                    Path source = file.toPath();
+                    Path target =
+                        directory.toPath().resolve(source.getFileName());
+
+                    Files.createDirectories(directory.toPath());
+                    Files.copy(file.toPath(), target, REPLACE_EXISTING);
+                    Files.setLastModifiedTime(target,
+                                              Files.getLastModifiedTime(source));
+                    /*
+                     * DEPENDENCIES
+                     *
+                     * Report sort order:
+                     *      Licenses (LICENSE_ORDER)
+                     *      Model[name, url] (same if name is not blank)
+                     *      Artifacts (ArtifactModelCache.ORDER)
+                     */
+                    TreeMap<AnyLicenseInfo,Map<Model,List<Tuple>>> report =
+                        list.stream()
+                        .collect(groupingBy(Tuple::getLicense,
+                                            () -> new TreeMap<>(LICENSE_ORDER),
+                                            groupingBy(Tuple::getModel,
+                                                       () -> new TreeMap<>(MODEL_ORDER),
+                                                       toList())));
+
+                    warnIfExtractedLicenseInfo(report.keySet().stream());
+
+                    target = directory.toPath().resolve(DEPENDENCIES);
+
+                    try (PrintWriter out =
+                             new PrintWriter(Files
+                                             .newBufferedWriter(target,
+                                                                CREATE, WRITE,
+                                                                TRUNCATE_EXISTING))) {
+                        String boundary =
+                            String.join(EMPTY, Collections.nCopies(78, "-"));
+
+                        out.println(boundary);
+                        out.println(target.getFileName()
+                                    + " " + project.getArtifact());
+                        out.println(boundary);
+
+                        for (Map.Entry<AnyLicenseInfo,Map<Model,List<Tuple>>> section :
+                                 report.entrySet()) {
+                            out.println(boundary);
+                            out.println(toString(section.getKey()));
+                            out.println(boundary);
+
+                            boolean first = true;
+
+                            for (Map.Entry<Model,List<Tuple>> group :
+                                     section.getValue().entrySet()) {
+                                if (first) {
+                                    first = false;
+                                } else {
+                                    out.println();
+                                }
+
+                                if (isNotBlank(group.getKey().getName())) {
+                                    out.println(group.getKey().getName());
+                                }
+
+                                for (Tuple tuple : group.getValue()) {
+                                    out.println(tuple.getArtifact());
+                                }
+
+                                if (isNotBlank(group.getKey().getUrl())) {
+                                    out.println(group.getKey().getUrl());
+                                }
+                            }
+
+                            out.println(boundary);
+                        }
+                    }
+                } else {
+                    log.warn("Skipping for '" + packaging +"' packaging");
                 }
             } else {
-                log.warn("Skipping for '" + packaging +"' packaging");
+            log.info("Skipping " + getFile().getName() + " and "
+                     + DEPENDENCIES + " resource generation");
             }
         } catch (IOException exception) {
             fail(exception.getMessage(), exception);
