@@ -128,6 +128,9 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
     @Parameter(required = false)
     private Selection[] selections = null;
 
+    @Parameter(defaultValue = "true")
+    private boolean skipIfEmpty = true;
+
     @Inject private MavenProject project = null;
     @Inject private ArtifactLicenseCatalog catalog = null;
     @Inject private ArtifactModelCache cache = null;
@@ -151,28 +154,7 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                     /*
                      * LICENSE
                      */
-                    File file = getFile();
-
-                    if (file.exists() && file.isDirectory()) {
-                        throw new FileAlreadyExistsException(file.toString(),
-                                                             null,
-                                                             "Is not a file or link");
-                    }
-
-                    if (directory.exists() && (! directory.isDirectory())) {
-                        throw new FileAlreadyExistsException(directory.toString(),
-                                                             null,
-                                                             "Is not a directory");
-                    }
-
-                    Path source = file.toPath();
-                    Path target =
-                        directory.toPath().resolve(source.getFileName());
-
-                    Files.createDirectories(directory.toPath());
-                    Files.copy(file.toPath(), target, REPLACE_EXISTING);
-                    Files.setLastModifiedTime(target,
-                                              Files.getLastModifiedTime(source));
+                    generateLicense();
                     /*
                      * DEPENDENCIES
                      *
@@ -191,59 +173,18 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
 
                     warnIfExtractedLicenseInfo(report.keySet().stream());
 
-                    target = directory.toPath().resolve(DEPENDENCIES);
-
-                    try (PrintWriter out =
-                             new PrintWriter(Files
-                                             .newBufferedWriter(target,
-                                                                CREATE, WRITE,
-                                                                TRUNCATE_EXISTING))) {
-                        String boundary =
-                            String.join(EMPTY, Collections.nCopies(78, "-"));
-
-                        out.println(boundary);
-                        out.println(target.getFileName()
-                                    + " " + project.getArtifact());
-                        out.println(boundary);
-
-                        for (Map.Entry<AnyLicenseInfo,Map<Model,List<Tuple>>> section :
-                                 report.entrySet()) {
-                            out.println(boundary);
-                            out.println(toString(section.getKey()));
-                            out.println(boundary);
-
-                            boolean first = true;
-
-                            for (Map.Entry<Model,List<Tuple>> group :
-                                     section.getValue().entrySet()) {
-                                if (first) {
-                                    first = false;
-                                } else {
-                                    out.println();
-                                }
-
-                                if (isNotBlank(group.getKey().getName())) {
-                                    out.println(group.getKey().getName());
-                                }
-
-                                for (Tuple tuple : group.getValue()) {
-                                    out.println(tuple.getArtifact());
-                                }
-
-                                if (isNotBlank(group.getKey().getUrl())) {
-                                    out.println(group.getKey().getUrl());
-                                }
-                            }
-
-                            out.println(boundary);
-                        }
+                    if ((! report.isEmpty()) || (! skipIfEmpty)) {
+                        generateReport(report);
+                    } else {
+                        log.info("Skipping empty " + DEPENDENCIES
+                                 + " resource generation");
                     }
                 } else {
                     log.warn("Skipping for '" + packaging +"' packaging");
                 }
             } else {
-            log.info("Skipping " + getFile().getName() + " and "
-                     + DEPENDENCIES + " resource generation");
+                log.info("Skipping " + getFile().getName() + " and "
+                         + DEPENDENCIES + " resource generation");
             }
         } catch (IOException exception) {
             fail(exception.getMessage(), exception);
@@ -281,6 +222,76 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
         }
 
         return scope;
+    }
+
+    private void generateLicense() throws Exception {
+        File file = getFile();
+
+        if (file.exists() && file.isDirectory()) {
+            throw new FileAlreadyExistsException(file.toString(),
+                                                 null,
+                                                 "Is not a file or link");
+        }
+
+        if (directory.exists() && (! directory.isDirectory())) {
+            throw new FileAlreadyExistsException(directory.toString(),
+                                                 null,
+                                                 "Is not a directory");
+        }
+
+        Path source = file.toPath();
+        Path target = directory.toPath().resolve(source.getFileName());
+
+        Files.createDirectories(directory.toPath());
+        Files.copy(file.toPath(), target, REPLACE_EXISTING);
+        Files.setLastModifiedTime(target, Files.getLastModifiedTime(source));
+    }
+
+    private void generateReport(TreeMap<AnyLicenseInfo,Map<Model,List<Tuple>>> report) throws Exception {
+        Path target = directory.toPath().resolve(DEPENDENCIES);
+
+        try (PrintWriter out =
+                 new PrintWriter(Files.newBufferedWriter(target,
+                                                         CREATE, WRITE,
+                                                         TRUNCATE_EXISTING))) {
+            String boundary = String.join(EMPTY, Collections.nCopies(78, "-"));
+
+            out.println(boundary);
+            out.println(target.getFileName() + " " + project.getArtifact());
+            out.println(boundary);
+
+            for (Map.Entry<AnyLicenseInfo,Map<Model,List<Tuple>>> section :
+                     report.entrySet()) {
+                out.println(boundary);
+                out.println(toString(section.getKey()));
+                out.println(boundary);
+
+                boolean first = true;
+
+                for (Map.Entry<Model,List<Tuple>> group :
+                         section.getValue().entrySet()) {
+                    if (first) {
+                        first = false;
+                    } else {
+                        out.println();
+                    }
+
+                    if (isNotBlank(group.getKey().getName())) {
+                        out.println(group.getKey().getName());
+                    }
+
+                    for (Tuple tuple : group.getValue()) {
+                        out.println(tuple.getArtifact());
+                    }
+
+                    if (isNotBlank(group.getKey().getUrl())) {
+                        out.println(group.getKey().getUrl());
+                    }
+                }
+
+                out.println(boundary);
+            }
+        }
     }
 
     private static String toString(AnyLicenseInfo license) {
