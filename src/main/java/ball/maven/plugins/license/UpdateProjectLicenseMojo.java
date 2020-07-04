@@ -122,7 +122,7 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
                     String id = license.toString();
 
                     if (id != null && (! id.equals(name))) {
-                        log.warn(SPDX_LICENSE_IDENTIFIER + ": " + id);
+                        log.warn("{}: {}", SPDX_LICENSE_IDENTIFIER, id);
                     }
                 } else {
                 }
@@ -215,7 +215,7 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
                 catalog.flush();
             }
         } else {
-            log.info("Skipping " + getFile().getName() + " update");
+            log.info("Skipping {} update", getFile().getName());
         }
     }
 }

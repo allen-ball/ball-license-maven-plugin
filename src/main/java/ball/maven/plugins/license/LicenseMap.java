@@ -112,7 +112,7 @@ public class LicenseMap extends TreeMap<String,License> {
 
     @PreDestroy
     public void destroy() {
-        log.debug(getClass().getSimpleName() + ".size() = " + size());
+        log.debug("{}.size() = {}", getClass().getSimpleName(), size());
     }
 
     @Override

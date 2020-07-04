@@ -148,7 +148,7 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
             try (FileInputStream in = new FileInputStream(file)) {
                 catalog.loadFromXML(in);
             } catch (IOException exception) {
-                log.error("Cannot read " + file);
+                log.error("Cannot read {}", file);
             }
         } else {
             try (InputStream in = getClass().getResourceAsStream(CATALOG)) {
@@ -164,7 +164,7 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
                 put(new KeyArtifact(key),
                     resolver.parseLicenseString(catalog.getProperty(key)));
             } catch (Exception exception) {
-                log.error(key + ": " + exception.getMessage(), exception);
+                log.error("{}: {}", key, exception.getMessage(), exception);
             }
         }
     }
@@ -187,7 +187,7 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
             try (FileOutputStream out = new FileOutputStream(file)) {
                 catalog.storeToXML(out, file.getName());
             } catch (IOException exception) {
-                log.warn("Cannot write " + file);
+                log.warn("Cannot write {}", file);
             }
         }
     }
@@ -200,7 +200,7 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
     @PreDestroy
     public void destroy() {
         flush();
-        log.debug(getClass().getSimpleName() + ".size() = " + size());
+        log.debug("{}.size() = {}", getClass().getSimpleName(), size());
     }
 
     @Override
@@ -252,7 +252,7 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
                 .collect(toList());
         } catch (ZipException exception) {
         } catch (IOException exception) {
-            log.debug(artifact + ": " + exception.getMessage(), exception);
+            log.debug("{}: {}", artifact, exception.getMessage(), exception);
         }
 
         Map<String,AnyLicenseInfo> found =
@@ -274,7 +274,7 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
             .collect(toList());
 
         if (bundle.isEmpty() && pom.isEmpty() && found.isEmpty()) {
-            log.warn(artifact + ": No license(s) specified or found");
+            log.warn("{}: No license(s) specified or found", artifact);
         }
 
         List<AnyLicenseInfo> licenses = bundle.stream().collect(toList());
@@ -293,13 +293,13 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
 
         if ((! licenses.isEmpty()) && (! isFullySpecified(licenses))) {
             log.debug("------------------------------------------------------------");
-            log.debug(ArtifactUtils.key(artifact));
-            log.debug(String.valueOf(url));
-            log.debug("      Bundle: " + bundle);
-            log.debug("         POM: " + pom);
-            log.debug("     Scanned: " + scanned);
-            log.debug("       Found: " + found.values());
-            log.debug("  License(s): " + licenses);
+            log.debug("{}", ArtifactUtils.key(artifact));
+            log.debug("{}", url);
+            log.debug("      Bundle: {}", bundle);
+            log.debug("         POM: {}", pom);
+            log.debug("     Scanned: {}", scanned);
+            log.debug("       Found: {}", found.values());
+            log.debug("  License(s): {}", licenses);
             log.debug("------------------------------------------------------------");
         }
 
@@ -316,7 +316,7 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
                         null)
                 .toURL();
         } catch(URISyntaxException | MalformedURLException exception) {
-            log.debug(artifact + ": " + exception.getMessage(), exception);
+            log.debug("{}: {}", artifact, exception.getMessage(), exception);
             throw new IllegalStateException(exception);
         }
 
@@ -330,7 +330,7 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
             try {
                 url = new URI(string).toURL();
             } catch(URISyntaxException | MalformedURLException exception) {
-                log.debug(string + ": " + exception.getMessage(), exception);
+                log.debug("{}: {}", string, exception.getMessage(), exception);
             }
         }
 

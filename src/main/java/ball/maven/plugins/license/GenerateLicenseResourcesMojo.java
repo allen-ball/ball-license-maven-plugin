@@ -176,20 +176,20 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                     if ((! report.isEmpty()) || (! skipIfEmpty)) {
                         generateReport(report);
                     } else {
-                        log.info("Skipping empty " + DEPENDENCIES
-                                 + " resource generation");
+                        log.info("Skipping empty {} resource generation",
+                                 DEPENDENCIES);
                     }
                 } else {
-                    log.warn("Skipping for '" + packaging +"' packaging");
+                    log.warn("Skipping for '{}' packaging", packaging);
                 }
             } else {
-                log.info("Skipping " + getFile().getName() + " and "
-                         + DEPENDENCIES + " resource generation");
+                log.info("Skipping {} and  {} resource generation",
+                         getFile().getName(), DEPENDENCIES);
             }
         } catch (IOException exception) {
             fail(exception.getMessage(), exception);
         } catch (Throwable throwable) {
-            log.error(throwable.getMessage(), throwable);
+            log.error("{}", throwable.getMessage(), throwable);
 
             if (throwable instanceof MojoExecutionException) {
                 throw (MojoExecutionException) throwable;
@@ -217,8 +217,8 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
 
         if (scope.isEmpty()) {
             log.warn("Specified scope is empty");
-            log.debug("    includeScope = " + includeScope);
-            log.debug("    excludeScope = " + excludeScope);
+            log.debug("    includeScope = {}", includeScope);
+            log.debug("    excludeScope = {}", excludeScope);
         }
 
         return scope;
