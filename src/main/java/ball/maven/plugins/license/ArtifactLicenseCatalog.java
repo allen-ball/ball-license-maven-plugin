@@ -43,6 +43,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
@@ -92,10 +93,12 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
 
     private static final String CATALOG = "artifact-license-catalog.xml";
 
-    private static final Pattern INCLUDE =
-        Pattern.compile("(?i)^(.*/|)(LICENSE([.][^/]+)?|about.html)$");
-    private static final Pattern EXCLUDE =
-        Pattern.compile("(?i)^.*[.]class$");
+    private static final Predicate<String> INCLUDE =
+        Pattern.compile("(?i)^(.*/|)(LICENSE([.][^/]+)?|about.html)$")
+        .asPredicate();
+    private static final Predicate<String> EXCLUDE =
+        Pattern.compile("(?i)^.*[.]class$")
+        .asPredicate().negate();
 
     private static final Comparator<? super Boolean> TRUTH =
         (t, u) -> Objects.equals(t, u) ? 0 : (t ? -1 : 1);
@@ -245,8 +248,8 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
             scanned =
                 jar.stream()
                 .map(JarEntry::getName)
-                .filter(t -> INCLUDE.matcher(t).matches())
-                .filter(t -> (! EXCLUDE.matcher(t).matches()))
+                .filter(INCLUDE)
+                .filter(EXCLUDE)
                 .map(t -> parse(t, resolve(url, t)))
                 .filter(t -> (! (t instanceof URLLicenseInfo)))
                 .collect(toList());
