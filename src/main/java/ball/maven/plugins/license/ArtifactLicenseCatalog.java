@@ -228,8 +228,9 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
         List<AnyLicenseInfo> bundle = Collections.emptyList();
         List<AnyLicenseInfo> scanned = Collections.emptyList();
 
-        try (JarFile jar =
-                 ((JarURLConnection) url.openConnection()).getJarFile()) {
+        try {
+            JarFile jar =
+                ((JarURLConnection) url.openConnection()).getJarFile();
             Pattern pattern = Pattern.compile("((?<id>.+);link=)?(?<url>.*)");
 
             bundle =
