@@ -35,6 +35,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.Callable;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import javax.inject.Inject;
@@ -134,6 +135,7 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
     @Inject private MavenProject project = null;
     @Inject private ArtifactLicenseCatalog catalog = null;
     @Inject private ArtifactModelCache cache = null;
+    @Inject private ExecutorServiceImpl executor = null;
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
@@ -144,12 +146,25 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                 if (ARCHIVE_PACKAGING.contains(packaging)) {
                     Selections selections = new Selections();
                     Set<String> scope = getScope();
-                    List<Tuple> list =
+                    /*
+                     * Populate the caches.
+                     */
+                    List<Callable<AnyLicenseInfo>> tasks =
                         project.getArtifacts()
                         .stream()
                         .filter(t -> scope.contains(t.getScope()))
-                        .map(t -> new Tuple(selections.get(t),
-                                            cache.get(t), t))
+                        .<Callable<AnyLicenseInfo>>map(t -> (() -> selections.get(t)))
+                        .collect(toList());
+
+                    executor.invokeAll(tasks);
+                    /*
+                     * Get the records for the report.
+                     */
+                    List<Tuple> tuples =
+                        project.getArtifacts()
+                        .stream()
+                        .filter(t -> scope.contains(t.getScope()))
+                        .map(t -> new Tuple(selections.get(t), cache.get(t), t))
                         .collect(toList());
                     /*
                      * LICENSE
@@ -164,7 +179,7 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                      *      Artifacts (ArtifactModelCache.ORDER)
                      */
                     TreeMap<AnyLicenseInfo,Map<Model,List<Tuple>>> report =
-                        list.stream()
+                        tuples.stream()
                         .collect(groupingBy(Tuple::getLicense,
                                             () -> new TreeMap<>(LICENSE_ORDER),
                                             groupingBy(Tuple::getModel,
