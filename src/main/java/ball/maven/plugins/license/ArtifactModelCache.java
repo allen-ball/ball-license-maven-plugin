@@ -85,7 +85,7 @@ public class ArtifactModelCache extends TreeMap<Artifact,Model> {
 
     @PreDestroy
     public void destroy() {
-        log.debug(getClass().getSimpleName() + ".size() = " + size());
+        log.debug("{}.size() = {}", getClass().getSimpleName(), size());
     }
 
     @Override
@@ -118,8 +118,8 @@ public class ArtifactModelCache extends TreeMap<Artifact,Model> {
             try {
                 model = reader.read(file, null);
             } catch (Exception exception) {
-                log.debug("Cannot read POM for " + artifact);
-                /* log.debug(exception.getMessage(), exception); */
+                log.debug("Cannot read POM for {}", artifact);
+                /* log.debug("{}", exception.getMessage(), exception); */
             }
 
             if (model != null
@@ -136,8 +136,8 @@ public class ArtifactModelCache extends TreeMap<Artifact,Model> {
                         builder.build(file, request)
                         .getProject().getModel();
                 } catch (Exception exception) {
-                    log.debug("Cannot load POM for " + artifact);
-                    /* log.debug(exception.getMessage(), exception); */
+                    log.debug("Cannot load POM for {}", artifact);
+                    /* log.debug("{}", exception.getMessage(), exception); */
                 }
             }
         }

@@ -54,11 +54,13 @@ import static lombok.AccessLevel.PROTECTED;
  * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
  * @version $Revision$
  */
-@NoArgsConstructor(access = PROTECTED) @ToString @Slf4j
+@NoArgsConstructor(access = PROTECTED) @Getter @ToString @Slf4j
 public abstract class AbstractLicenseMojo extends AbstractMojo {
+    @Parameter(defaultValue = "false", property = "license.skip")
+    private boolean skip = false;
+
     @Parameter(defaultValue = "${basedir}/LICENSE",
                property = "license.file", readonly = true)
-    @Getter
     private File file = null;
 
     protected void warnIfExtractedLicenseInfo(Stream<AnyLicenseInfo> stream) {
@@ -75,14 +77,14 @@ public abstract class AbstractLicenseMojo extends AbstractMojo {
             for (ExtractedLicenseInfo license : extracted) {
                 String id = license.getLicenseId();
 
-                log.warn("    '" + license.getLicenseId() + "'");
+                log.warn("    '{}'", license.getLicenseId());
 
                 String[] seeAlso = license.getSeeAlso();
 
                 if (seeAlso != null) {
                     for (String string : seeAlso) {
                         if (! string.equals(license.getLicenseId())) {
-                            log.warn("        " + string);
+                            log.warn("        {}", string);
                         }
                     }
                 }
@@ -174,14 +176,14 @@ public abstract class AbstractLicenseMojo extends AbstractMojo {
                     Files.setLastModifiedTime(to, remote);
                 }
 
-                log.info(message);
+                log.info("{}", message);
             } else {
-                log.info(to + " is up-to-date");
+                log.info("{} is up-to-date", to);
             }
         } catch (IOException exception) {
             fail(message, exception);
         } catch (Throwable throwable) {
-            log.error(throwable.getMessage(), throwable);
+            log.error("{}", throwable.getMessage(), throwable);
 
             if (throwable instanceof MojoExecutionException) {
                 throw (MojoExecutionException) throwable;
@@ -203,7 +205,7 @@ public abstract class AbstractLicenseMojo extends AbstractMojo {
      *                          Always.
      */
     protected void fail(String message) throws MojoFailureException {
-        log.error(message);
+        log.error("{}", message);
         throw new MojoFailureException(message);
     }
 
@@ -218,7 +220,7 @@ public abstract class AbstractLicenseMojo extends AbstractMojo {
      */
     protected void fail(String message,
                         Throwable reason) throws MojoFailureException {
-        log.error(message, reason);
+        log.error("{}", message, reason);
         throw new MojoFailureException(message, reason);
     }
 }
