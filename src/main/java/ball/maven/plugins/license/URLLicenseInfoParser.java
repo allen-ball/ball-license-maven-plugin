@@ -171,7 +171,7 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
                 .collect(toMap(k -> Pattern.compile(k.getKey().toString()),
                                v -> v.getValue().toString().trim()));
         } catch (Exception exception) {
-            log.error(exception.getMessage(), exception);
+            log.error("{}", exception.getMessage(), exception);
             throw new ExceptionInInitializerError(exception);
         }
     }
@@ -193,7 +193,7 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
 
     @PreDestroy
     public void destroy() {
-        log.debug(getClass().getSimpleName() + ".size() = " + size());
+        log.debug("{}.size() = {}", getClass().getSimpleName(), size());
     }
 
     /**
@@ -338,13 +338,13 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
                 }
             }
         } catch (FileNotFoundException exception) {
-            log.debug("File not found: " + url);
+            log.debug("File not found: {}", url);
         } catch (Exception exception) {
-            log.warn("Cannot read " + url);
+            log.warn("Cannot read {}", url);
 
             if (connection != null) {
                 connection.getHeaderFields().entrySet().stream()
-                    .forEach(t -> log.debug(String.valueOf(t)));
+                    .forEach(t -> log.debug("{}", t));
             }
         } finally {
             if (value == null) {
@@ -430,7 +430,7 @@ public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
             try {
                 uri = connection.getURL().toURI().resolve(uri);
             } catch (Exception exception) {
-                log.debug(exception.getMessage(), exception);
+                log.debug("{}", exception.getMessage(), exception);
             }
         }
 

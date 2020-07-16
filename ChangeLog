@@ -1,3 +1,26 @@
+2020-07-15  Allen D. Ball  <ball@hcf.dev>
+
+	* pom.xml: Released version 1.1.1.
+
+2020-07-13  Allen D. Ball  <ball@hcf.dev>
+
+	* src/main/java/ball/maven/plugins/license/GenerateLicenseResourcesMojo.java:
+	Populate caches in parallel.
+
+	* src/main/java/ball/maven/plugins/license/ExecutorServiceImpl.java:
+	Initial writing.
+
+2020-07-04  Allen D. Ball  <ball@hcf.dev>
+
+	* Use log format parameters with placeholders.
+
+	* GenerateLicenseResourcesMojo.java:
+	Added "skipIfEmpty" configuration option (default: true).
+
+2020-06-28  Allen D. Ball  <ball@hcf.dev>
+
+	* Added support for "skip" parameter ("license.skip" property).
+
 2020-06-12  Allen D. Ball  <ball@hcf.dev>
 
 	* pom.xml: Released version 1.1.0.
