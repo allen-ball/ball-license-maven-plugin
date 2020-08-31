@@ -26,6 +26,7 @@ import java.io.PrintWriter;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -120,6 +121,10 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                property = "license.resources.directory")
     private File directory = null;
 
+    @Parameter(defaultValue = "META-INF",
+               property = "license.resources.subdirectory")
+    private String subdirectory = null;
+
     @Parameter(defaultValue = INCLUDE_SCOPE, property = "license.includeScope")
     private String includeScope = INCLUDE_SCOPE;
 
@@ -144,11 +149,28 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                 String packaging = project.getPackaging();
 
                 if (ARCHIVE_PACKAGING.contains(packaging)) {
-                    Selections selections = new Selections();
-                    Set<String> scope = getScope();
+                    if (directory.exists() && (! directory.isDirectory())) {
+                        throw new FileAlreadyExistsException(directory.toString(),
+                                                             null,
+                                                             "Is not a directory");
+                    }
+
+                    Path parent = directory.toPath();
+
+                    if (subdirectory != null && (! subdirectory.isEmpty())) {
+                        Path path = Paths.get(subdirectory);
+
+                        if (path.isAbsolute()) {
+                            throw new IllegalArgumentException(path + " is not relative");
+                        }
+
+                        parent = parent.resolve(path);
+                    }
                     /*
                      * Populate the caches.
                      */
+                    Selections selections = new Selections();
+                    Set<String> scope = getScope();
                     List<Callable<AnyLicenseInfo>> tasks =
                         project.getArtifacts()
                         .stream()
@@ -169,7 +191,7 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                     /*
                      * LICENSE
                      */
-                    generateLicense();
+                    generateLicense(parent);
                     /*
                      * DEPENDENCIES
                      *
@@ -189,7 +211,7 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                     warnIfExtractedLicenseInfo(report.keySet().stream());
 
                     if ((! report.isEmpty()) || (! skipIfEmpty)) {
-                        generateReport(report);
+                        generateReport(report, parent);
                     } else {
                         log.info("Skipping empty {} resource generation",
                                  DEPENDENCIES);
@@ -239,7 +261,7 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
         return scope;
     }
 
-    private void generateLicense() throws Exception {
+    private void generateLicense(Path parent) throws Exception {
         File file = getFile();
 
         if (file.exists() && file.isDirectory()) {
@@ -248,22 +270,17 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                                                  "Is not a file or link");
         }
 
-        if (directory.exists() && (! directory.isDirectory())) {
-            throw new FileAlreadyExistsException(directory.toString(),
-                                                 null,
-                                                 "Is not a directory");
-        }
-
         Path source = file.toPath();
-        Path target = directory.toPath().resolve(source.getFileName());
+        Path target = parent.resolve(source.getFileName());
 
-        Files.createDirectories(directory.toPath());
+        Files.createDirectories(parent);
         Files.copy(file.toPath(), target, REPLACE_EXISTING);
         Files.setLastModifiedTime(target, Files.getLastModifiedTime(source));
     }
 
-    private void generateReport(TreeMap<AnyLicenseInfo,Map<Model,List<Tuple>>> report) throws Exception {
-        Path target = directory.toPath().resolve(DEPENDENCIES);
+    private void generateReport(TreeMap<AnyLicenseInfo,Map<Model,List<Tuple>>> report,
+                                Path parent) throws Exception {
+        Path target = parent.resolve(DEPENDENCIES);
 
         try (PrintWriter out =
                  new PrintWriter(Files.newBufferedWriter(target,
