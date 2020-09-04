@@ -20,6 +20,9 @@
     https://repository.jboss.org/licenses/cddl.txt
   </entry>
   <entry key="CDDL-1.1 AND GPL-2.0-with-classpath-exception">
+    https://github.com/javaee/activation/blob/master/LICENSE.txt
+    https://github.com/javaee/javax.xml.soap/blob/master/LICENSE
+    https://github.com/javaee/jax-ws-spec/blob/master/LICENSE.md
     https://oss.oracle.com/licenses/CDDL+GPL-1.1
   </entry>
   <entry key="GPL-2.0-with-classpath-exception">
