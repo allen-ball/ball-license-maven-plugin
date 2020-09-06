@@ -33,7 +33,7 @@
   <parent>
     <groupId>ball</groupId>
     <artifactId>parent</artifactId>
-    <version>20200903.0</version>
+    <version>20200906-SNAPSHOT</version>
     <relativePath>../ball/parent/pom.xml</relativePath>
   </parent>
   <inceptionYear>2020</inceptionYear>
