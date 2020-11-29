@@ -38,6 +38,11 @@
     https://www.mozilla.org/MPL/MPL-1.0.txt
     https://www.mozilla.org/en-US/MPL/MPL-1.0.txt
   </entry>
+  <!--
+  <entry key="OGC-1.0">
+    https://raw.githubusercontent.com/opengeospatial/geoapi/master/LICENSE.txt
+  </entry>
+  -->
   <entry key="Plexus">
     https://raw.githubusercontent.com/dom4j/dom4j/master/LICENSE
   </entry>
