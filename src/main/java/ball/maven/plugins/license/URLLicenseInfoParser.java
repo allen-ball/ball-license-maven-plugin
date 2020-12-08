@@ -36,7 +36,7 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.Scanner;
 import java.util.Set;
-import java.util.TreeMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -81,7 +81,7 @@ import static org.apache.http.entity.ContentType.TEXT_PLAIN;
  */
 @Named @Singleton
 @Slf4j
-public class URLLicenseInfoParser extends TreeMap<String,AnyLicenseInfo> {
+public class URLLicenseInfoParser extends ConcurrentSkipListMap<String,AnyLicenseInfo> {
     private static final long serialVersionUID = -1086861055455360074L;
 
     private static final HostnameVerifier NONE = new HostnameVerifierImpl();
