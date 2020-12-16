@@ -11,4 +11,7 @@
   <entry key="(?i)https?://github.com/([^/]+)/([^/]+)(/blob/master)?/(LICENSE([.][^/]*)?)">
     https://raw.githubusercontent.com/$1/$2/master/$4
   </entry>
+  <entry key="(?i)https://raw.githubusercontent.com/junrar/junrar/master/license.txt">
+    https://raw.githubusercontent.com/junrar/junrar/master/LICENSE
+  </entry>
 </properties>

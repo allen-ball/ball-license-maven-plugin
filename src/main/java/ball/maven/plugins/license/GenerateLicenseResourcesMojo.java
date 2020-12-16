@@ -220,7 +220,7 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                     log.warn("Skipping for '{}' packaging", packaging);
                 }
             } else {
-                log.info("Skipping {} and  {} resource generation",
+                log.info("Skipping {} and {} resource generation",
                          getFile().getName(), DEPENDENCIES);
             }
         } catch (IOException exception) {
