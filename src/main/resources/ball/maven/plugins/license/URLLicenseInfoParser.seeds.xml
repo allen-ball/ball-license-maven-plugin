@@ -10,6 +10,7 @@
     http://unitsofmeasurement.github.io/LICENSE.txt
     http://www.eclipse.org/org/documents/edl-v10.php
     http://www.jcraft.com/jsch/LICENSE.txt
+    http://www.jcraft.com/jzlib/LICENSE.txt
     https://raw.githubusercontent.com/googleapis/api-common-java/master/LICENSE
     https://raw.githubusercontent.com/googleapis/gax-java/master/LICENSE
     https://www.adobe.com/devnet/xmp/library/eula-xmp-library-java.html
@@ -23,6 +24,7 @@
     https://github.com/javaee/activation/blob/master/LICENSE.txt
     https://github.com/javaee/javax.xml.soap/blob/master/LICENSE
     https://github.com/javaee/jax-ws-spec/blob/master/LICENSE.md
+    https://javaee.github.io/javamail/LICENSE
     https://oss.oracle.com/licenses/CDDL+GPL-1.1
   </entry>
   <entry key="GPL-2.0-with-classpath-exception">
@@ -36,6 +38,11 @@
     https://www.mozilla.org/MPL/MPL-1.0.txt
     https://www.mozilla.org/en-US/MPL/MPL-1.0.txt
   </entry>
+  <!--
+  <entry key="OGC-1.0">
+    https://raw.githubusercontent.com/opengeospatial/geoapi/master/LICENSE.txt
+  </entry>
+  -->
   <entry key="Plexus">
     https://raw.githubusercontent.com/dom4j/dom4j/master/LICENSE
   </entry>
