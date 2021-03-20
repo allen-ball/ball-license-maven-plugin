@@ -11,6 +11,12 @@
   <entry key="(?i)https?://github.com/([^/]+)/([^/]+)(/blob/master)?/(LICENSE([.][^/]*)?)">
     https://raw.githubusercontent.com/$1/$2/master/$4
   </entry>
+  <entry key="(?i)https?://projects.eclipse.org/license/epl-2.0">
+    https://www.eclipse.org/legal/epl-2.0/
+  </entry>
+  <entry key="(?i)https?://projects.eclipse.org/license/secondary-gpl-2.0-cp">
+    https://www.gnu.org/software/classpath/license.html
+  </entry>
   <entry key="(?i)https://raw.githubusercontent.com/junrar/junrar/master/license.txt">
     https://raw.githubusercontent.com/junrar/junrar/master/LICENSE
   </entry>
