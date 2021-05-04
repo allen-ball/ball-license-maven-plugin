@@ -12,7 +12,7 @@
 
   <resolver:resolve>
     <dependencies>
-      <dependency coords="ball:parent:20210415.0:xml:compile"/>
+      <dependency coords="ball:parent:20210419-SNAPSHOT:xml:compile"/>
       <dependency coords="ball:ball-util:6.1.1.20210415:compile"/>
     </dependencies>
     <properties/>
