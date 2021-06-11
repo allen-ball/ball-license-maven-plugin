@@ -51,12 +51,7 @@ import static org.apache.commons.lang3.StringUtils.SPACE;
 public class LicenseMap extends TreeMap<String,License> {
     private static final long serialVersionUID = 8959458091372664080L;
 
-    private static final ListedLicenses LICENSES =
-        ListedLicenses.getListedLicenses();
-    /*
-     * private static final ListedExceptions EXCEPTIONS =
-     *     ListedExceptions.getListedExceptions();
-     */
+    private static final String ONLY_USE_LOCAL_LICENSES = "SPDXParser.OnlyUseLocalLicenses";
 
     /**
      * {@code resources/licenses-full.json} read from SPDX artifacts.
@@ -64,6 +59,10 @@ public class LicenseMap extends TreeMap<String,License> {
     public static final JsonNode LICENSES_FULL_JSON;
 
     static {
+        if (System.getProperty(ONLY_USE_LOCAL_LICENSES) == null) {
+            System.setProperty(ONLY_USE_LOCAL_LICENSES, String.valueOf(true));
+        }
+
         try {
             LICENSES_FULL_JSON =
                 new ObjectMapper()
@@ -79,36 +78,33 @@ public class LicenseMap extends TreeMap<String,License> {
      * Sole constructor.
      */
     @Inject
-    public LicenseMap() {
-        super(String.CASE_INSENSITIVE_ORDER);
-
-        try {
-            for (String key : LICENSES.getSpdxListedLicenseIds()) {
-                License license = LICENSES.getListedLicenseById(key);
-
-                put(key, license);
-                putIfAbsent(license.getName(), license);
-            }
-
-            for (JsonNode node : LICENSES_FULL_JSON.at("/licenses")) {
-                String spdx = node.at("/identifiers/spdx/0").asText();
-
-                if (containsKey(spdx)) {
-                    Stream.of(node.at("/id").asText(),
-                              node.at("/name").asText())
-                        .map(t -> t.trim())
-                        .map(t -> t.replaceAll("[\\p{Space}]+", SPACE))
-                        .filter(StringUtils::isNotBlank)
-                        .forEach(t -> computeIfAbsent(t, k -> get(spdx)));
-                }
-            }
-        } catch (Exception exception) {
-            throw new ExceptionInInitializerError(exception);
-        }
-    }
+    public LicenseMap() { super(String.CASE_INSENSITIVE_ORDER); }
 
     @PostConstruct
-    public void init() { }
+    public void init() throws Exception {
+        ListedLicenses licenses = ListedLicenses.getListedLicenses();
+        /* ListedExceptions exceptions = ListedExceptions.getListedExceptions(); */
+
+        for (String key : licenses.getSpdxListedLicenseIds()) {
+            License license = licenses.getListedLicenseById(key);
+
+            put(key, license);
+            putIfAbsent(license.getName(), license);
+        }
+
+        for (JsonNode node : LICENSES_FULL_JSON.at("/licenses")) {
+            String spdx = node.at("/identifiers/spdx/0").asText();
+
+            if (containsKey(spdx)) {
+                Stream.of(node.at("/id").asText(),
+                          node.at("/name").asText())
+                    .map(t -> t.trim())
+                    .map(t -> t.replaceAll("[\\p{Space}]+", SPACE))
+                    .filter(StringUtils::isNotBlank)
+                    .forEach(t -> computeIfAbsent(t, k -> get(spdx)));
+            }
+        }
+    }
 
     @PreDestroy
     public void destroy() {
