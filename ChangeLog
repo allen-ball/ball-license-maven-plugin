@@ -1,5 +1,9 @@
 2021-06-19  Allen D. Ball  <ball@hcf.dev>
 
+	* Refactored LicenseMap with wider AnyLicenseInfo values.
+	Added LicenseMap.aliases.xml to define additional aliases (keys)
+	for LicenseMap.
+
 	* DefaultMethods.java: Initial writing.
 
 	* pom.xml: Started development of 1.3.3-SNAPSHOT.
