@@ -81,7 +81,7 @@ import static org.apache.http.entity.ContentType.TEXT_PLAIN;
  */
 @Named @Singleton
 @Slf4j
-public class URLLicenseInfoParser extends ConcurrentSkipListMap<String,AnyLicenseInfo> {
+public class URLLicenseInfoParser extends ConcurrentSkipListMap<String,AnyLicenseInfo> implements DefaultMethods {
     private static final long serialVersionUID = -1086861055455360074L;
 
     private static final HostnameVerifier NONE = new HostnameVerifierImpl();
@@ -110,13 +110,15 @@ public class URLLicenseInfoParser extends ConcurrentSkipListMap<String,AnyLicens
         this.map = Objects.requireNonNull(map);
 
         try {
-            for (License value : map.values()) {
-                String id = value.getLicenseId();
+            for (AnyLicenseInfo value : map.values()) {
+                if (value instanceof License) {
+                    String id = ((License) value).getLicenseId();
 
-                put(String.format("https://opensource.org/licenses/%s", id),
-                    value);
-                put(String.format("https://spdx.org/licenses/%s.html", id),
-                    value);
+                    put(String.format("https://opensource.org/licenses/%s", id),
+                        value);
+                    put(String.format("https://spdx.org/licenses/%s.html", id),
+                        value);
+                }
             }
 
             for (JsonNode node :
@@ -148,10 +150,12 @@ public class URLLicenseInfoParser extends ConcurrentSkipListMap<String,AnyLicens
                     .forEach(t -> putIfAbsent(t.trim(), value));
             }
 
-            for (License value : map.values()) {
-                for (String key : value.getSeeAlso()) {
-                    if (isNotBlank(key)) {
-                        putIfAbsent(key.trim(), value);
+            for (AnyLicenseInfo value : map.values()) {
+                if (value instanceof License) {
+                    for (String key : ((License) value).getSeeAlso()) {
+                        if (isNotBlank(key)) {
+                            putIfAbsent(key.trim(), value);
+                        }
                     }
                 }
             }
@@ -174,18 +178,6 @@ public class URLLicenseInfoParser extends ConcurrentSkipListMap<String,AnyLicens
             log.error("{}", exception.getMessage(), exception);
             throw new ExceptionInInitializerError(exception);
         }
-    }
-
-    private Properties getXMLProperties(String name) throws Exception {
-        Properties properties = new Properties();
-        String resource =
-            String.format("%1$s.%2$s.xml", getClass().getSimpleName(), name);
-
-        try (InputStream in = getClass().getResourceAsStream(resource)) {
-            properties.loadFromXML(in);
-        }
-
-        return properties;
     }
 
     @PostConstruct

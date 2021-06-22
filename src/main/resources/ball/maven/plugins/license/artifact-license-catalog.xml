@@ -9,7 +9,6 @@
   <entry key="com.google.api:gax:1.55.0">BSD-2-Clause</entry>
   <entry key="javax.activation:javax.activation-api:1.2.0">(CDDL-1.1 AND GPL-2.0-with-classpath-exception)</entry>
   <entry key="javax.annotation:javax.annotation-api:1.3.2">(CDDL-1.1 AND GPL-2.0-with-classpath-exception)</entry>
-  <entry key="mysql:mysql-connector-java:8.0.19">(GPL-2.0 WITH Universal-FOSS-exception-1.0)</entry>
   <entry key="org.antlr:antlr-runtime:3.4">BSD-3-Clause</entry>
   <entry key="org.antlr:antlr:3.4">BSD-3-Clause</entry>
   <entry key="org.dom4j:dom4j:2.1.1">Plexus</entry>
