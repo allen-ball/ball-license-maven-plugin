@@ -23,6 +23,7 @@ package ball.maven.plugins.license;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.TreeMap;
 import java.util.stream.Stream;
 import javax.annotation.PostConstruct;
@@ -32,10 +33,13 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.spdx.rdfparser.license.AnyLicenseInfo;
 import org.spdx.rdfparser.license.License;
+import org.spdx.rdfparser.license.LicenseInfoFactory;
 /* import org.spdx.rdfparser.license.ListedExceptions; */
 import org.spdx.rdfparser.license.ListedLicenses;
 
+import static ball.maven.plugins.license.LicenseUtilityMethods.isFullySpdxListed;
 import static org.apache.commons.lang3.StringUtils.SPACE;
 
 /**
@@ -48,7 +52,7 @@ import static org.apache.commons.lang3.StringUtils.SPACE;
  */
 @Named @Singleton
 @Slf4j
-public class LicenseMap extends TreeMap<String,License> {
+public class LicenseMap extends TreeMap<String,AnyLicenseInfo> implements DefaultMethods {
     private static final long serialVersionUID = 8959458091372664080L;
 
     private static final String ONLY_USE_LOCAL_LICENSES = "SPDXParser.OnlyUseLocalLicenses";
@@ -104,6 +108,22 @@ public class LicenseMap extends TreeMap<String,License> {
                     .forEach(t -> computeIfAbsent(t, k -> get(spdx)));
             }
         }
+
+        Properties aliases = getXMLProperties("aliases");
+
+        for (String id : aliases.stringPropertyNames()) {
+            AnyLicenseInfo value =
+                LicenseInfoFactory.parseSPDXLicenseString(id);
+
+            if (! isFullySpdxListed(value)) {
+                throw new IllegalArgumentException(id);
+            }
+
+            Stream.of(aliases.getProperty(id).split("\\R+"))
+                .map(String::trim)
+                .filter(StringUtils::isNotBlank)
+                .forEach(t -> putIfAbsent(t, value));
+        }
     }
 
     @PreDestroy
@@ -112,8 +132,8 @@ public class LicenseMap extends TreeMap<String,License> {
     }
 
     @Override
-    public License get(Object key) {
-        License value = super.get(key);
+    public AnyLicenseInfo get(Object key) {
+        AnyLicenseInfo value = super.get(key);
 
         if (value == null) {
             if (key instanceof String) {
