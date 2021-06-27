@@ -55,7 +55,7 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
-import org.spdx.rdfparser.license.ConjunctiveLicenseSet;
+import org.spdx.rdfparser.license.DisjunctiveLicenseSet;
 import org.spdx.rdfparser.license.LicenseSet;
 import org.spdx.rdfparser.license.OrLaterOperator;
 import org.spdx.rdfparser.license.WithExceptionOperator;
@@ -336,7 +336,7 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
             string =
                 Stream.of(members)
                 .map(Objects::toString)
-                .collect(joining((license instanceof ConjunctiveLicenseSet) ? " AND " : " OR "));
+                .collect(joining((license instanceof DisjunctiveLicenseSet) ? " OR " : " AND "));
         } else {
             string = Objects.toString(license, EMPTY);
         }

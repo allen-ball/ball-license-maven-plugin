@@ -1,5 +1,8 @@
 2021-06-27  Allen D. Ball  <ball@hcf.dev>
 
+	* Assume license collections form DisjunctiveLicenseSets ("OR") by
+	default.
+
 	* src/main/java/ball/maven/plugins/license/ArtifactModelCache.java:
 	Set ModelReader.IS_STRICT=false when reading Model.
 

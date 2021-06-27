@@ -26,11 +26,11 @@
     https://glassfish.dev.java.net/public/CDDLv1.0.html
     https://repository.jboss.org/licenses/cddl.txt
   </entry>
-  <entry key="CDDL-1.0 AND GPL-2.0-with-classpath-exception">
+  <entry key="CDDL-1.0 OR GPL-2.0-with-classpath-exception">
     http://glassfish.dev.java.net/nonav/public/CDDL+GPL.html
     https://glassfish.dev.java.net/nonav/public/CDDL+GPL.html
   </entry>
-  <entry key="CDDL-1.1 AND GPL-2.0-with-classpath-exception">
+  <entry key="CDDL-1.1 OR GPL-2.0-with-classpath-exception">
     https://github.com/javaee/activation/blob/master/LICENSE.txt
     https://github.com/javaee/javax.xml.soap/blob/master/LICENSE
     https://github.com/javaee/jax-ws-spec/blob/master/LICENSE.md

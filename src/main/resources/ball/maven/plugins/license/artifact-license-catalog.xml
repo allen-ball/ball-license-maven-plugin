@@ -9,9 +9,9 @@
   <entry key="com.google.api:gax-httpjson:0.72.0">BSD-2-Clause</entry>
   <entry key="com.google.api:gax:1.55.0">BSD-2-Clause</entry>
   <entry key="com.thoughtworks.paranamer:paranamer:2.3">BSD-3-Clause</entry>
-  <entry key="javax.servlet.jsp:jsp-api:2.1">CDDL-1.1 AND GPL-2.0-with-classpath-exception</entry>
-  <entry key="javax.transaction:jta:1.1">CDDL-1.1 AND GPL-2.0-with-classpath-exception</entry>
-  <entry key="javax.transaction:transaction-api:1.1">CDDL-1.1 AND GPL-2.0-with-classpath-exception</entry>
+  <entry key="javax.servlet.jsp:jsp-api:2.1">CDDL-1.1 OR GPL-2.0-with-classpath-exception</entry>
+  <entry key="javax.transaction:jta:1.1">CDDL-1.1 OR GPL-2.0-with-classpath-exception</entry>
+  <entry key="javax.transaction:transaction-api:1.1">CDDL-1.1 OR GPL-2.0-with-classpath-exception</entry>
   <entry key="org.antlr:antlr-runtime:3.4">BSD-3-Clause</entry>
   <entry key="org.antlr:antlr:3.4">BSD-3-Clause</entry>
   <entry key="org.dom4j:dom4j:2.1.1">Plexus</entry>
