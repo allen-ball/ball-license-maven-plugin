@@ -267,15 +267,19 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
         /*
          * Licenses specified in the Artifact's POM
          */
+        List<AnyLicenseInfo> pom = Collections.emptyList();
         Model model = cache.get(artifact);
-        List<AnyLicenseInfo> pom =
-            Stream.of(model.getLicenses())
-            .filter(Objects::nonNull)
-            .flatMap(List::stream)
-            .distinct()
-            .map(t -> parse(t.getName().replaceAll(",", ""),
-                            resolve(toURL(model.getUrl()), t.getUrl())))
-            .collect(toList());
+
+        if (model != null) {
+            pom =
+                Stream.of(model.getLicenses())
+                .filter(Objects::nonNull)
+                .flatMap(List::stream)
+                .distinct()
+                .map(t -> parse(t.getName().replaceAll(",", ""),
+                                resolve(toURL(model.getUrl()), t.getUrl())))
+                .collect(toList());
+        }
 
         if (bundle.isEmpty() && pom.isEmpty() && found.isEmpty()) {
             log.warn("{}: No license(s) specified or found", artifact);
