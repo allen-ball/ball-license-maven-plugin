@@ -1,5 +1,8 @@
 2021-06-27  Allen D. Ball  <ball@hcf.dev>
 
+	* src/main/java/ball/maven/plugins/license/ArtifactModelCache.java:
+	Set ModelReader.IS_STRICT=false when reading Model.
+
 	* src/main/java/ball/maven/plugins/license/ArtifactLicenseCatalog.java:
 	Check Model for null.
 

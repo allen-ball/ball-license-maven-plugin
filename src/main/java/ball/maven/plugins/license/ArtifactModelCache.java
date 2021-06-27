@@ -59,6 +59,10 @@ public class ArtifactModelCache extends TreeMap<Artifact,Model> {
         .thenComparing(Artifact::getArtifactId)
         .thenComparing(Artifact::getVersion);
 
+    private static final TreeMap<String,Object> OPTIONS = new TreeMap<>();
+
+    static { OPTIONS.put(ModelReader.IS_STRICT, false); }
+
     /** @serial */ private final MavenSession session;
     /** @serial */ private final ProjectBuilder builder;
     /** @serial */ private final ModelReader reader;
@@ -116,10 +120,9 @@ public class ArtifactModelCache extends TreeMap<Artifact,Model> {
 
         if (model == null) {
             try {
-                model = reader.read(file, null);
+                model = reader.read(file, OPTIONS);
             } catch (Exception exception) {
-                log.debug("Cannot read POM for {}", artifact);
-                /* log.debug("{}", exception.getMessage(), exception); */
+                log.debug("Cannot read POM for {}", artifact, exception);
             }
 
             if (model != null
@@ -136,8 +139,7 @@ public class ArtifactModelCache extends TreeMap<Artifact,Model> {
                         builder.build(file, request)
                         .getProject().getModel();
                 } catch (Exception exception) {
-                    log.debug("Cannot load POM for {}", artifact);
-                    /* log.debug("{}", exception.getMessage(), exception); */
+                    log.debug("Cannot load POM for {}", artifact, exception);
                 }
             }
         }
