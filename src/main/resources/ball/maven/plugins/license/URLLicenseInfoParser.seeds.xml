@@ -3,9 +3,11 @@
 <properties>
   <comment>$Id$</comment>
   <entry key="Apache-2.0">
+    http://commons.apache.org/dormant/commons-el/LICENSE.txt
     http://ehcache.org/src/assemble/EHCACHE-CORE-LICENSE.txt
-    https://ehcache.org/src/assemble/EHCACHE-CORE-LICENSE.txt
+    http://jpam.sourceforge.net/LICENSE.txt
     http://www.ehcache.org/src/assemble/EHCACHE-CORE-LICENSE.txt
+    https://ehcache.org/src/assemble/EHCACHE-CORE-LICENSE.txt
     https://www.ehcache.org/src/assemble/EHCACHE-CORE-LICENSE.txt
   </entry>
   <entry key="BSD-3-Clause">
@@ -14,6 +16,7 @@
     http://www.eclipse.org/org/documents/edl-v10.php
     http://www.jcraft.com/jsch/LICENSE.txt
     http://www.jcraft.com/jzlib/LICENSE.txt
+    https://golang.org/LICENSE
     https://raw.githubusercontent.com/googleapis/api-common-java/master/LICENSE
     https://raw.githubusercontent.com/googleapis/gax-java/master/LICENSE
     https://www.adobe.com/devnet/xmp/library/eula-xmp-library-java.html
@@ -23,12 +26,18 @@
     https://glassfish.dev.java.net/public/CDDLv1.0.html
     https://repository.jboss.org/licenses/cddl.txt
   </entry>
+  <entry key="CDDL-1.0 AND GPL-2.0-with-classpath-exception">
+    http://glassfish.dev.java.net/nonav/public/CDDL+GPL.html
+    https://glassfish.dev.java.net/nonav/public/CDDL+GPL.html
+  </entry>
   <entry key="CDDL-1.1 AND GPL-2.0-with-classpath-exception">
     https://github.com/javaee/activation/blob/master/LICENSE.txt
     https://github.com/javaee/javax.xml.soap/blob/master/LICENSE
     https://github.com/javaee/jax-ws-spec/blob/master/LICENSE.md
+    https://glassfish.java.net/public/CDDL+GPL_1_1.html
     https://javaee.github.io/javamail/LICENSE
     https://oss.oracle.com/licenses/CDDL+GPL-1.1
+    https://raw.githubusercontent.com/javaee/javax.annotation/master/LICENSE
   </entry>
   <entry key="GPL-2.0-with-classpath-exception">
     https://repository.jboss.org/licenses/gpl-2.0-ce.txt
