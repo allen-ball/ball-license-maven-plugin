@@ -1,3 +1,10 @@
+2021-07-06  Allen D. Ball  <ball@hcf.dev>
+
+	* src/main/java/ball/maven/plugins/license/ArtifactLicenseCatalog.java:
+	Always load artifact-license-catalog.xml resource into catalog
+	Properties' defaults so users' catalogs are updated with newer
+	versions of the plugin.
+
 2021-06-27  Allen D. Ball  <ball@hcf.dev>
 
 	* pom.xml: Started development of 2.0.0-SNAPSHOT.

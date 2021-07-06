@@ -121,7 +121,8 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
     /** @serial */ private final LicenseMap map;
     /** @serial */ private final LicenseResolver resolver;
     /** @serial */ private final File file;
-    /** @serial */ private final Properties catalog = new Properties();
+    /** @serial */ private final Properties defaults = new Properties();
+    /** @serial */ private final Properties catalog = new Properties(defaults);
 
     /**
      * Sole constructor.
@@ -147,18 +148,18 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
     }
 
     protected void load() {
+        try (InputStream in = getClass().getResourceAsStream(CATALOG)) {
+            if (in != null) {
+                defaults.loadFromXML(in);
+            }
+        } catch (IOException exception) {
+        }
+
         if (file.exists()) {
             try (FileInputStream in = new FileInputStream(file)) {
                 catalog.loadFromXML(in);
             } catch (IOException exception) {
                 log.error("Cannot read {}", file);
-            }
-        } else {
-            try (InputStream in = getClass().getResourceAsStream(CATALOG)) {
-                if (in != null) {
-                    catalog.loadFromXML(in);
-                }
-            } catch (IOException exception) {
             }
         }
 
