@@ -277,7 +277,7 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
                 .filter(Objects::nonNull)
                 .flatMap(List::stream)
                 .distinct()
-                .map(t -> parse(t.getName().replaceAll(",", ""),
+                .map(t -> parse((t.getName() != null) ? t.getName().replaceAll(",", "") : null,
                                 resolve(toURL(model.getUrl()), t.getUrl())))
                 .collect(toList());
         }
