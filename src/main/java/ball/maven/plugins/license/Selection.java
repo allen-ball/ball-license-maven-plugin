@@ -20,8 +20,11 @@ package ball.maven.plugins.license;
  * limitations under the License.
  * ##########################################################################
  */
-import java.util.Map;
+import java.util.Collections;
 import lombok.Data;
+import lombok.Getter;
+import org.apache.maven.artifact.Artifact;
+import org.apache.maven.shared.artifact.filter.StrictPatternIncludesArtifactFilter;
 import org.spdx.rdfparser.license.AnyLicenseInfo;
 
 /**
@@ -33,18 +36,14 @@ import org.spdx.rdfparser.license.AnyLicenseInfo;
  * @version $Revision$
  */
 @Data
-public class Selection implements Map.Entry<String,AnyLicenseInfo> {
+public class Selection {
     private String artifact = null;
     private AnyLicenseInfo license = null;
+    @Getter(lazy = true)
+    private final StrictPatternIncludesArtifactFilter filter =
+        new StrictPatternIncludesArtifactFilter(Collections.singletonList(artifact));
 
-    @Override
-    public String getKey() { return artifact; }
-
-    @Override
-    public AnyLicenseInfo getValue() { return license; }
-
-    @Override
-    public AnyLicenseInfo setValue(AnyLicenseInfo value) {
-        throw new UnsupportedOperationException();
+    public boolean include(Artifact artifact) {
+        return getFilter().include(artifact);
     }
 }

@@ -51,6 +51,10 @@
   </properties>
   <dependencies verbose="true">
     <dependency>
+      <groupId>org.apache.maven.shared</groupId>
+      <artifactId>maven-common-artifact-filters</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.spdx</groupId>
       <artifactId>licenseListPublisher</artifactId>
     </dependency>

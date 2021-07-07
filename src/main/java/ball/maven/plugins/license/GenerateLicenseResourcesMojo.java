@@ -168,13 +168,12 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                     /*
                      * Populate the caches.
                      */
-                    Selections selections = new Selections();
                     Set<String> scope = getScope();
                     List<Callable<AnyLicenseInfo>> tasks =
                         project.getArtifacts()
                         .stream()
                         .filter(t -> scope.contains(t.getScope()))
-                        .<Callable<AnyLicenseInfo>>map(t -> (() -> selections.get(t)))
+                        .<Callable<AnyLicenseInfo>>map(t -> (() -> getLicense(t)))
                         .collect(toList());
 
                     executor.invokeAll(tasks);
@@ -185,7 +184,7 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                         project.getArtifacts()
                         .stream()
                         .filter(t -> scope.contains(t.getScope()))
-                        .map(t -> new Tuple(selections.get(t), cache.get(t), t))
+                        .map(t -> new Tuple(getLicense(t), cache.get(t), t))
                         .collect(toList());
                     /*
                      * LICENSE
@@ -258,6 +257,27 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
         }
 
         return scope;
+    }
+
+    private AnyLicenseInfo getLicense(Artifact artifact) {
+        AnyLicenseInfo value = null;
+
+        if (value == null) {
+            if (selections != null) {
+                for (Selection selection : selections) {
+                    if (selection.include(artifact)) {
+                        value = selection.getLicense();
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (value == null) {
+            value = catalog.get(artifact);
+        }
+
+        return value;
     }
 
     private void generateLicense(Path parent) throws Exception {
@@ -342,47 +362,6 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
         }
 
         return string;
-    }
-
-    /**
-     * {@link Selection}s @{@link Parameter} {@link Map}.  Dispatches to
-     * {@link #catalog} if no license is specified.
-     */
-    @NoArgsConstructor
-    private class Selections extends TreeMap<String,AnyLicenseInfo> {
-        private static final long serialVersionUID = 4229926081116865138L;
-
-        {
-            if (selections != null) {
-                Stream.of(selections)
-                    .forEach(t -> put(t.getKey(), t.getValue()));
-            }
-        }
-
-        @Override
-        public AnyLicenseInfo get(Object key) {
-            AnyLicenseInfo value = null;
-
-            if (key instanceof Artifact) {
-                Artifact artifact = (Artifact) key;
-
-                if (value == null) {
-                    value = get(ArtifactUtils.key(artifact));
-                }
-
-                if (value == null) {
-                    value = get(ArtifactUtils.versionlessKey(artifact));
-                }
-
-                if (value == null) {
-                    value = catalog.get(artifact);
-                }
-            } else {
-                value = super.get(key);
-            }
-
-            return value;
-        }
     }
 
     @AllArgsConstructor @Getter @ToString
