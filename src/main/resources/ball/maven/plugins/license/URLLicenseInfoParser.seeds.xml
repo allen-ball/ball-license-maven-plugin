@@ -42,6 +42,9 @@
   <entry key="GPL-2.0-with-classpath-exception">
     https://repository.jboss.org/licenses/gpl-2.0-ce.txt
   </entry>
+  <entry key="ICU">
+    https://raw.githubusercontent.com/unicode-org/icu/master/icu4c/LICENSE
+  </entry>
   <entry key="LGPL-2.1">
     https://repository.jboss.org/licenses/lgpl-2.1.txt
     https://www.gnu.org/licenses/old-licenses/lgpl-2.1.en.html
