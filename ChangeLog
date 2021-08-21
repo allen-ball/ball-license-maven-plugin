@@ -1,8 +1,10 @@
+2021-08-20  Allen D. Ball  <ball@hcf.dev>
+
+	* pom.xml: Released version 2.1.0.20210820.
+
 2021-08-14  Allen D. Ball  <ball@hcf.dev>
 
 	* Compile against Maven 3.8.2.
-
-	* Started developement of 2.1.0-SNAPSHOT.
 
 2021-07-22  Allen D. Ball  <ball@hcf.dev>
 
