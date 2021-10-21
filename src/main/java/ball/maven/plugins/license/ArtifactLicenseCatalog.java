@@ -199,6 +199,7 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
     @PostConstruct
     public void init() {
         load();
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> flush()));
     }
 
     @PreDestroy

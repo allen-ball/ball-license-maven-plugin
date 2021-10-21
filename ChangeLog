@@ -1,5 +1,9 @@
 2021-10-20  Allen D. Ball  <ball@hcf.dev>
 
+	* src/main/java/ball/maven/plugins/license/ArtifactLicenseCatalog.java:
+	Flush via Runtime.getRuntime().addShutdownHook(...) hook to flush
+	in event of Maven command interrupt.
+
 	* pom.xml: Started development of 2.2.0-SNAPSHOT.
 
 2021-09-23  Allen D. Ball  <ball@hcf.dev>
