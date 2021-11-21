@@ -1,3 +1,7 @@
+2021-11-21  Allen D. Ball  <ball@hcf.dev>
+
+	* pom.xml: Manage SPDX artifact versions.
+
 2021-10-20  Allen D. Ball  <ball@hcf.dev>
 
 	* src/main/java/ball/maven/plugins/license/ArtifactLicenseCatalog.java:
