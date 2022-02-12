@@ -2,10 +2,8 @@ package ball.maven.plugins.license;
 /*-
  * ##########################################################################
  * License Maven Plugin
- * $Id$
- * $HeadURL$
  * %%
- * Copyright (C) 2020, 2021 Allen D. Ball
+ * Copyright (C) 2020 - 2022 Allen D. Ball
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,7 +82,6 @@ import static org.apache.maven.artifact.ArtifactUtils.key;
  * and caches any value.
  *
  * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
- * @version $Revision$
  */
 @Named @Singleton
 @Slf4j
@@ -133,18 +130,14 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
      * @param   resolver        The injected {@link LicenseResolver}.
      */
     @Inject
-    public ArtifactLicenseCatalog(MavenSession session,
-                                  ArtifactModelCache cache,
-                                  LicenseMap map, LicenseResolver resolver) {
-        super(Comparator.comparing(ArtifactUtils::key,
-                                   String.CASE_INSENSITIVE_ORDER));
+    public ArtifactLicenseCatalog(MavenSession session, ArtifactModelCache cache, LicenseMap map, LicenseResolver resolver) {
+        super(Comparator.comparing(ArtifactUtils::key, String.CASE_INSENSITIVE_ORDER));
 
         this.session = Objects.requireNonNull(session);
         this.cache = Objects.requireNonNull(cache);
         this.map = Objects.requireNonNull(map);
         this.resolver = Objects.requireNonNull(resolver);
-        this.file =
-            new File(session.getLocalRepository().getBasedir(), CATALOG);
+        this.file = new File(session.getLocalRepository().getBasedir(), CATALOG);
     }
 
     protected void load() {
@@ -165,8 +158,7 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
 
         for (String key : catalog.stringPropertyNames()) {
             try {
-                put(new KeyArtifact(key),
-                    resolver.parseLicenseString(catalog.getProperty(key)));
+                put(new KeyArtifact(key), resolver.parseLicenseString(catalog.getProperty(key)));
             } catch (Exception exception) {
                 log.error("{}: {}", key, exception.getMessage(), exception);
             }
@@ -320,11 +312,7 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
         URL url = null;
 
         try {
-            url =
-                new URI("jar",
-                        artifact.getFile().toURI().toASCIIString() + "!/",
-                        null)
-                .toURL();
+            url = new URI("jar", artifact.getFile().toURI().toASCIIString() + "!/", null).toURL();
         } catch(URISyntaxException | MalformedURLException exception) {
             log.debug("{}: {}", artifact, exception.getMessage(), exception);
             throw new IllegalStateException(exception);
@@ -411,8 +399,7 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
     }
 
     private boolean isFullySpecified(Collection<AnyLicenseInfo> collection) {
-        return ((! collection.isEmpty())
-                && collection.stream().allMatch(t -> isFullySpdxListed(t)));
+        return ((! collection.isEmpty()) && collection.stream().allMatch(t -> isFullySpdxListed(t)));
     }
 
     private class KeyArtifact extends DefaultArtifact {

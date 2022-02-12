@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
 <properties>
-  <comment>$Id$</comment>
   <entry key="Apache-2.0">
     http://commons.apache.org/dormant/commons-el/LICENSE.txt
     http://ehcache.org/src/assemble/EHCACHE-CORE-LICENSE.txt

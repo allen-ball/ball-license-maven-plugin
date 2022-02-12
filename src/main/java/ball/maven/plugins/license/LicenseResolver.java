@@ -2,10 +2,8 @@ package ball.maven.plugins.license;
 /*-
  * ##########################################################################
  * License Maven Plugin
- * $Id$
- * $HeadURL$
  * %%
- * Copyright (C) 2020, 2021 Allen D. Ball
+ * Copyright (C) 2020 - 2022 Allen D. Ball
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +42,6 @@ import org.spdx.rdfparser.license.LicenseSet;
  * normalize.
  *
  * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
- * @version $Revision$
  */
 @Named @Singleton
 @ToString @Slf4j
@@ -62,10 +59,8 @@ public class LicenseResolver {
     @Inject
     public LicenseResolver(LicenseMap licenseMap,
                            URLLicenseInfoParser urlLicenseInfoParser) {
-        this.licenseMap =
-            Objects.requireNonNull(licenseMap);
-        this.urlLicenseInfoParser =
-            Objects.requireNonNull(urlLicenseInfoParser);
+        this.licenseMap = Objects.requireNonNull(licenseMap);
+        this.urlLicenseInfoParser = Objects.requireNonNull(urlLicenseInfoParser);
     }
 
     @PostConstruct
@@ -87,8 +82,7 @@ public class LicenseResolver {
         AnyLicenseInfo out = in;
 
         if (in instanceof LicenseSet) {
-            List<AnyLicenseInfo> list =
-                Arrays.asList(((LicenseSet) in).getMembers());
+            List<AnyLicenseInfo> list = Arrays.asList(((LicenseSet) in).getMembers());
 
             for (int i = 0, n = list.size(); i < n; i += 1) {
                 list.set(i, parse(list.get(i)));
@@ -120,12 +114,9 @@ public class LicenseResolver {
         AnyLicenseInfo out = toLicense(ids);
 
         if (out == null) {
-            out =
-                new ExtractedLicenseInfo(in.getLicenseId(),
-                                         in.getExtractedText());
+            out = new ExtractedLicenseInfo(in.getLicenseId(), in.getExtractedText());
 
-            TextLicenseInfo.addSeeAlso((ExtractedLicenseInfo) out,
-                                       in.getSeeAlso());
+            TextLicenseInfo.addSeeAlso((ExtractedLicenseInfo) out, in.getSeeAlso());
         }
 
         return out;
@@ -169,8 +160,7 @@ public class LicenseResolver {
         if (in.size() == 1) {
             out = in.iterator().next();
         } else {
-            AnyLicenseInfo[] members =
-                in.stream().toArray(AnyLicenseInfo[]::new);
+            AnyLicenseInfo[] members = in.stream().toArray(AnyLicenseInfo[]::new);
 
             Arrays.sort(members, Comparator.comparing(Objects::toString));
             out = new DisjunctiveLicenseSet(members);

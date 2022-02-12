@@ -2,10 +2,8 @@ package ball.maven.plugins.license;
 /*-
  * ##########################################################################
  * License Maven Plugin
- * $Id$
- * $HeadURL$
  * %%
- * Copyright (C) 2020, 2021 Allen D. Ball
+ * Copyright (C) 2020 - 2022 Allen D. Ball
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +31,6 @@ import org.spdx.rdfparser.license.LicenseInfoFactory;
  * {@link org.codehaus.plexus.component.configurator.converters.ConfigurationConverter}.
  *
  * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
- * @version $Revision$
  */
 @NoArgsConstructor @ToString
 public class LicenseConverter extends AbstractBasicConverter {
@@ -49,11 +46,9 @@ public class LicenseConverter extends AbstractBasicConverter {
         Object object = null;
 
         try {
-            object =
-                TYPE.cast(LicenseInfoFactory.parseSPDXLicenseString(string));
+            object = TYPE.cast(LicenseInfoFactory.parseSPDXLicenseString(string));
         } catch (Exception exception) {
-            String message =
-                "Unable to convert '" + string + "' to " + TYPE.getName();
+            String message = "Unable to convert '" + string + "' to " + TYPE.getName();
 
             throw new ComponentConfigurationException(message, exception);
         }

@@ -2,10 +2,8 @@ package ball.maven.plugins.license;
 /*-
  * ##########################################################################
  * License Maven Plugin
- * $Id$
- * $HeadURL$
  * %%
- * Copyright (C) 2020, 2021 Allen D. Ball
+ * Copyright (C) 2020 - 2022 Allen D. Ball
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +32,6 @@ import org.codehaus.plexus.component.configurator.BasicComponentConfigurator;
  * {@link org.codehaus.plexus.component.configurator.ComponentConfigurator}.
  *
  * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
- * @version $Revision$
  */
 @Named("license-mojo-component-configurator") @Singleton
 @NoArgsConstructor @ToString @Slf4j

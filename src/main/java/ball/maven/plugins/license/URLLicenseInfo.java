@@ -2,10 +2,8 @@ package ball.maven.plugins.license;
 /*-
  * ##########################################################################
  * License Maven Plugin
- * $Id$
- * $HeadURL$
  * %%
- * Copyright (C) 2020, 2021 Allen D. Ball
+ * Copyright (C) 2020 - 2022 Allen D. Ball
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +27,6 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
  * {@bean.info}
  *
  * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
- * @version $Revision$
  */
 public class URLLicenseInfo extends TextLicenseInfo {
 
@@ -40,7 +37,6 @@ public class URLLicenseInfo extends TextLicenseInfo {
      * @param   urls            The URLs to add.
      */
     public URLLicenseInfo(String id, String... urls) {
-        super(isNotBlank(id) ? id : urls[0],
-              isNotBlank(id) ? id : urls[0], urls);
+        super(isNotBlank(id) ? id : urls[0], isNotBlank(id) ? id : urls[0], urls);
     }
 }

@@ -2,10 +2,8 @@ package ball.maven.plugins.license;
 /*-
  * ##########################################################################
  * License Maven Plugin
- * $Id$
- * $HeadURL$
  * %%
- * Copyright (C) 2020, 2021 Allen D. Ball
+ * Copyright (C) 2020 - 2022 Allen D. Ball
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +46,6 @@ import static org.apache.commons.lang3.StringUtils.SPACE;
  * {@link ListedLicenses#getListedLicenses()}.
  *
  * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
- * @version $Revision$
  */
 @Named @Singleton
 @Slf4j
@@ -70,9 +67,7 @@ public class LicenseMap extends TreeMap<String,AnyLicenseInfo> implements Defaul
         try {
             LICENSES_FULL_JSON =
                 new ObjectMapper()
-                .readTree(LicenseMap.class
-                          .getClassLoader()
-                          .getResource("resources/licenses-full.json"));
+                .readTree(LicenseMap.class.getClassLoader().getResource("resources/licenses-full.json"));
         } catch (Exception exception) {
             throw new ExceptionInInitializerError(exception);
         }
@@ -100,8 +95,7 @@ public class LicenseMap extends TreeMap<String,AnyLicenseInfo> implements Defaul
             String spdx = node.at("/identifiers/spdx/0").asText();
 
             if (containsKey(spdx)) {
-                Stream.of(node.at("/id").asText(),
-                          node.at("/name").asText())
+                Stream.of(node.at("/id").asText(), node.at("/name").asText())
                     .map(t -> t.trim())
                     .map(t -> t.replaceAll("[\\p{Space}]+", SPACE))
                     .filter(StringUtils::isNotBlank)
@@ -112,8 +106,7 @@ public class LicenseMap extends TreeMap<String,AnyLicenseInfo> implements Defaul
         Properties aliases = getXMLProperties("aliases");
 
         for (String id : aliases.stringPropertyNames()) {
-            AnyLicenseInfo value =
-                LicenseInfoFactory.parseSPDXLicenseString(id);
+            AnyLicenseInfo value = LicenseInfoFactory.parseSPDXLicenseString(id);
 
             if (! isFullySpdxListed(value)) {
                 throw new IllegalArgumentException(id);

@@ -2,10 +2,8 @@ package ball.maven.plugins.license;
 /*-
  * ##########################################################################
  * License Maven Plugin
- * $Id$
- * $HeadURL$
  * %%
- * Copyright (C) 2020, 2021 Allen D. Ball
+ * Copyright (C) 2020 - 2022 Allen D. Ball
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,14 +25,12 @@ import java.util.Properties;
  * Common default utility methods.
  *
  * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
- * @version $Revision$
  */
 public interface DefaultMethods {
 
     default Properties getXMLProperties(String name) throws Exception {
         Properties properties = new Properties();
-        String resource =
-            String.format("%1$s.%2$s.xml", getClass().getSimpleName(), name);
+        String resource = String.format("%1$s.%2$s.xml", getClass().getSimpleName(), name);
 
         try (InputStream in = getClass().getResourceAsStream(resource)) {
             properties.loadFromXML(in);

@@ -2,10 +2,8 @@ package ball.maven.plugins.license;
 /*-
  * ##########################################################################
  * License Maven Plugin
- * $Id$
- * $HeadURL$
  * %%
- * Copyright (C) 2020, 2021 Allen D. Ball
+ * Copyright (C) 2020 - 2022 Allen D. Ball
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,10 +52,8 @@ import static org.spdx.compare.LicenseCompareHelper.isTextStandardLicense;
  * {@maven.plugin.fields}
  *
  * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
- * @version $Revision$
  */
-@Mojo(name = "update-project-license",
-      configurator = "license-mojo-component-configurator",
+@Mojo(name = "update-project-license", configurator = "license-mojo-component-configurator",
       defaultPhase = INITIALIZE, requiresProject = true)
 @NoArgsConstructor @ToString @Slf4j
 public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
@@ -65,15 +61,12 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
     /**
      * {@link #SPDX_LICENSE_IDENTIFIER} = {@value #SPDX_LICENSE_IDENTIFIER}
      */
-    protected static final String SPDX_LICENSE_IDENTIFIER =
-        "SPDX-License-Identifier";
+    protected static final String SPDX_LICENSE_IDENTIFIER = "SPDX-License-Identifier";
 
-    @Parameter(defaultValue = "${project.licenses[0].name}",
-               property = "license.name")
+    @Parameter(defaultValue = "${project.licenses[0].name}", property = "license.name")
     private String name = null;
 
-    @Parameter(defaultValue = "${project.licenses[0].url}",
-               property = "license.url")
+    @Parameter(defaultValue = "${project.licenses[0].url}", property = "license.url")
     private String url = null;
 
     @Parameter(defaultValue = "false", property = "license.download")
@@ -152,14 +145,12 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
                                 .syntax(Document.OutputSettings.Syntax.xml);
 
                             boolean isDifferenceFound =
-                                isTextStandardLicense((License) license,
-                                                      document.body().text())
+                                isTextStandardLicense((License) license, document.body().text())
                                 .isDifferenceFound();
 
                             if (isDifferenceFound) {
                                 fail(getFile() + " does not contain "
-                                     + ((License) license).getLicenseId()
-                                     + " license text");
+                                     + ((License) license).getLicenseId() + " license text");
                             }
                         } catch (MojoFailureException exception) {
                             throw exception;
@@ -183,8 +174,7 @@ public class UpdateProjectLicenseMojo extends AbstractLicenseMojo {
                 }
 
                 if (isBlank(model.getInceptionYear())
-                    || (model.getLicenses() == null
-                        || model.getLicenses().size() != 1)
+                    || (model.getLicenses() == null || model.getLicenses().size() != 1)
                     || (! ((License) license).getLicenseId().equals(name))) {
                     /*
                      * org.apache.maven.model.License update =

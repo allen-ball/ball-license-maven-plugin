@@ -2,10 +2,8 @@ package ball.maven.plugins.license;
 /*-
  * ##########################################################################
  * License Maven Plugin
- * $Id$
- * $HeadURL$
  * %%
- * Copyright (C) 2020, 2021 Allen D. Ball
+ * Copyright (C) 2020 - 2022 Allen D. Ball
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,15 +50,13 @@ import static lombok.AccessLevel.PROTECTED;
  * Abstract base class for license {@link org.apache.maven.plugin.Mojo}s.
  *
  * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
- * @version $Revision$
  */
 @NoArgsConstructor(access = PROTECTED) @Getter @ToString @Slf4j
 public abstract class AbstractLicenseMojo extends AbstractMojo {
     @Parameter(defaultValue = "false", property = "license.skip")
     private boolean skip = false;
 
-    @Parameter(defaultValue = "${basedir}/LICENSE",
-               property = "license.file", readonly = true)
+    @Parameter(defaultValue = "${basedir}/LICENSE", property = "license.file", readonly = true)
     private File file = null;
 
     protected void warnIfExtractedLicenseInfo(Stream<AnyLicenseInfo> stream) {
@@ -109,9 +105,7 @@ public abstract class AbstractLicenseMojo extends AbstractMojo {
      *                          See
      *                          {@link org.apache.maven.plugin.Mojo#execute()}.
      */
-    protected void copy(String from, Path to,
-                        boolean overwrite) throws MojoExecutionException,
-                                                  MojoFailureException {
+    protected void copy(String from, Path to, boolean overwrite) throws MojoExecutionException, MojoFailureException {
         try {
             copy(new URL(from), to, overwrite);
         } catch (MalformedURLException exception) {
@@ -135,17 +129,14 @@ public abstract class AbstractLicenseMojo extends AbstractMojo {
      *                          See
      *                          {@link org.apache.maven.plugin.Mojo#execute()}.
      */
-    protected void copy(URL from, Path to,
-                        boolean overwrite) throws MojoExecutionException,
-                                                  MojoFailureException {
+    protected void copy(URL from, Path to, boolean overwrite) throws MojoExecutionException, MojoFailureException {
         String message = null;
 
         try {
             message = to.toString() + " <- " + from.toString();
 
             if (Files.isDirectory(to)) {
-                throw new FileAlreadyExistsException(to.toString(), null,
-                                                     "Is not a file or link");
+                throw new FileAlreadyExistsException(to.toString(), null, "Is not a file or link");
             }
 
             FileTime local = FileTime.fromMillis(0);
@@ -155,12 +146,8 @@ public abstract class AbstractLicenseMojo extends AbstractMojo {
             }
 
             URLConnection connection = from.openConnection();
-            FileTime remote =
-                FileTime.fromMillis(connection.getLastModified());
-            boolean isNewer =
-                (! Files.exists(to))
-                || remote.toMillis() == 0
-                || remote.compareTo(local) > 0;
+            FileTime remote = FileTime.fromMillis(connection.getLastModified());
+            boolean isNewer = (! Files.exists(to)) || remote.toMillis() == 0 || remote.compareTo(local) > 0;
 
             if (isNewer) {
                 CopyOption[] options =
@@ -218,8 +205,7 @@ public abstract class AbstractLicenseMojo extends AbstractMojo {
      * @throws  MojoFailureException
      *                          Always.
      */
-    protected void fail(String message,
-                        Throwable reason) throws MojoFailureException {
+    protected void fail(String message, Throwable reason) throws MojoFailureException {
         log.error("{}", message, reason);
         throw new MojoFailureException(message, reason);
     }

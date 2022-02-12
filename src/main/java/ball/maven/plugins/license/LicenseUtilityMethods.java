@@ -2,10 +2,8 @@ package ball.maven.plugins.license;
 /*-
  * ##########################################################################
  * License Maven Plugin
- * $Id$
- * $HeadURL$
  * %%
- * Copyright (C) 2020, 2021 Allen D. Ball
+ * Copyright (C) 2020 - 2022 Allen D. Ball
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +44,6 @@ import static lombok.AccessLevel.PRIVATE;
  * {@link AnyLicenseInfo} utility methods.
  *
  * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
- * @version $Revision$
  */
 @NoArgsConstructor(access = PRIVATE) @ToString
 public abstract class LicenseUtilityMethods {
@@ -80,15 +77,9 @@ public abstract class LicenseUtilityMethods {
         if (node instanceof LicenseSet) {
             children = ((LicenseSet) node).getMembers();
         } else if (node instanceof OrLaterOperator) {
-            children =
-                new AnyLicenseInfo[] {
-                    ((OrLaterOperator) node).getLicense()
-                };
+            children = new AnyLicenseInfo[] { ((OrLaterOperator) node).getLicense() };
         } else if (node instanceof WithExceptionOperator) {
-            children =
-                new AnyLicenseInfo[] {
-                    ((WithExceptionOperator) node).getLicense()
-                };
+            children = new AnyLicenseInfo[] { ((WithExceptionOperator) node).getLicense() };
         } else {
             children = new AnyLicenseInfo[] { };
         }
@@ -177,8 +168,7 @@ public abstract class LicenseUtilityMethods {
      * @return  {@code true} if an operator node; {@code false} otherwise.
      */
     public static boolean isOperator(AnyLicenseInfo node) {
-        return (node instanceof OrLaterOperator
-                || node instanceof WithExceptionOperator);
+        return (node instanceof OrLaterOperator || node instanceof WithExceptionOperator);
     }
 
     /**
@@ -218,10 +208,8 @@ public abstract class LicenseUtilityMethods {
         return partiallySpecified;
     }
 
-    private static <T> Stream<T> walk(T root,
-                                      Function<? super T,Collection<? extends T>> childrenOf) {
-        Walker<T> walker =
-            new Walker<>(Collections.singleton(root), childrenOf);
+    private static <T> Stream<T> walk(T root, Function<? super T,Collection<? extends T>> childrenOf) {
+        Walker<T> walker = new Walker<>(Collections.singleton(root), childrenOf);
 
         return StreamSupport.stream(walker, false);
     }
@@ -232,8 +220,7 @@ public abstract class LicenseUtilityMethods {
         private Iterator<Supplier<Walker<T>>> iterator = null;
         private Spliterator<? extends T> spliterator = null;
 
-        private Walker(Collection<? extends T> nodes,
-                       Function<? super T,Collection<? extends T>> childrenOf) {
+        private Walker(Collection<? extends T> nodes, Function<? super T,Collection<? extends T>> childrenOf) {
             super(Long.MAX_VALUE, IMMUTABLE | NONNULL);
 
             stream =

@@ -2,10 +2,8 @@ package ball.maven.plugins.license;
 /*-
  * ##########################################################################
  * License Maven Plugin
- * $Id$
- * $HeadURL$
  * %%
- * Copyright (C) 2020, 2021 Allen D. Ball
+ * Copyright (C) 2020 - 2022 Allen D. Ball
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +44,6 @@ import static org.apache.maven.model.building.ModelBuildingRequest.VALIDATION_LE
  * and caches any value.
  *
  * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
- * @version $Revision$
  */
 @Named @Singleton
 @Slf4j
@@ -75,8 +72,7 @@ public class ArtifactModelCache extends TreeMap<Artifact,Model> {
      * @param   reader          The injected {@link ModelReader}.
      */
     @Inject
-    public ArtifactModelCache(MavenSession session,
-                              ProjectBuilder builder, ModelReader reader) {
+    public ArtifactModelCache(MavenSession session, ProjectBuilder builder, ModelReader reader) {
         super(ORDER);
 
         this.session = Objects.requireNonNull(session);
@@ -108,11 +104,9 @@ public class ArtifactModelCache extends TreeMap<Artifact,Model> {
     private Model compute(Artifact artifact) {
         File file =
             new File(artifact.getFile().getParentFile(),
-                     artifact.getArtifactId()
-                     + "-" + artifact.getVersion() + ".pom");
+                     artifact.getArtifactId() + "-" + artifact.getVersion() + ".pom");
         Model model =
-            session.getProjects()
-            .stream()
+            session.getProjects().stream()
             .filter(t -> ORDER.compare(t.getArtifact(), artifact) == 0)
             .map(t -> t.getModel())
             .filter(Objects::nonNull)
@@ -135,9 +129,7 @@ public class ArtifactModelCache extends TreeMap<Artifact,Model> {
                         .setResolveDependencies(false)
                         .setProcessPlugins(false);
 
-                    model =
-                        builder.build(file, request)
-                        .getProject().getModel();
+                    model = builder.build(file, request).getProject().getModel();
                 } catch (Exception exception) {
                     log.debug("Cannot load POM for {}", artifact, exception);
                 }

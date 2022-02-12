@@ -2,10 +2,8 @@ package ball.maven.plugins.license;
 /*-
  * ##########################################################################
  * License Maven Plugin
- * $Id$
- * $HeadURL$
  * %%
- * Copyright (C) 2020, 2021 Allen D. Ball
+ * Copyright (C) 2020 - 2022 Allen D. Ball
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -77,7 +75,6 @@ import static org.apache.http.entity.ContentType.TEXT_PLAIN;
  * transparently calculates and caches any value.
  *
  * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
- * @version $Revision$
  */
 @Named @Singleton
 @Slf4j
@@ -92,8 +89,7 @@ public class URLLicenseInfoParser extends ConcurrentSkipListMap<String,AnyLicens
                   HttpURLConnection.HTTP_SEE_OTHER)
         .collect(toSet());
 
-    private static final Pattern CANONICAL =
-        Pattern.compile("<([^>]*)>; rel=\"canonical\"");
+    private static final Pattern CANONICAL = Pattern.compile("<([^>]*)>; rel=\"canonical\"");
 
     /** @serial */ private final LicenseMap map;
     /** @serial */ private final Map<Pattern,String> redirects;
@@ -114,17 +110,13 @@ public class URLLicenseInfoParser extends ConcurrentSkipListMap<String,AnyLicens
                 if (value instanceof License) {
                     String id = ((License) value).getLicenseId();
 
-                    put(String.format("https://opensource.org/licenses/%s", id),
-                        value);
-                    put(String.format("https://spdx.org/licenses/%s.html", id),
-                        value);
+                    put(String.format("https://opensource.org/licenses/%s", id), value);
+                    put(String.format("https://spdx.org/licenses/%s.html", id), value);
                 }
             }
 
-            for (JsonNode node :
-                     LicenseMap.LICENSES_FULL_JSON.at("/licenses")) {
-                AnyLicenseInfo value =
-                    map.get(node.at("/identifiers/spdx/0").asText());
+            for (JsonNode node : LicenseMap.LICENSES_FULL_JSON.at("/licenses")) {
+                AnyLicenseInfo value = map.get(node.at("/identifiers/spdx/0").asText());
 
                 if (value != null) {
                     for (JsonNode uri : node.at("/uris")) {
@@ -138,8 +130,7 @@ public class URLLicenseInfoParser extends ConcurrentSkipListMap<String,AnyLicens
             Properties seeds = getXMLProperties("seeds");
 
             for (String id : seeds.stringPropertyNames()) {
-                AnyLicenseInfo value =
-                    LicenseInfoFactory.parseSPDXLicenseString(id);
+                AnyLicenseInfo value = LicenseInfoFactory.parseSPDXLicenseString(id);
 
                 if (! isFullySpdxListed(value)) {
                     throw new IllegalArgumentException(id);
@@ -166,12 +157,10 @@ public class URLLicenseInfoParser extends ConcurrentSkipListMap<String,AnyLicens
                 .collect(toSet());
 
             set.stream()
-                .forEach(t -> computeIfAbsent(t.replace("https:", "http:"),
-                                              k -> get(t)));
+                .forEach(t -> computeIfAbsent(t.replace("https:", "http:"), k -> get(t)));
 
             redirects =
-                getXMLProperties("redirects").entrySet()
-                .stream()
+                getXMLProperties("redirects").entrySet().stream()
                 .collect(toMap(k -> Pattern.compile(k.getKey().toString()),
                                v -> v.getValue().toString().trim()));
         } catch (Exception exception) {
@@ -225,8 +214,7 @@ public class URLLicenseInfoParser extends ConcurrentSkipListMap<String,AnyLicens
             connection = new URL(url).openConnection();
 
             if (connection instanceof HttpURLConnection) {
-                ((HttpURLConnection) connection)
-                    .setInstanceFollowRedirects(false);
+                ((HttpURLConnection) connection).setInstanceFollowRedirects(false);
             }
 
             if (connection instanceof HttpsURLConnection) {
@@ -248,23 +236,18 @@ public class URLLicenseInfoParser extends ConcurrentSkipListMap<String,AnyLicens
                     if (value != null) {
                         put(redirectURL, value);
                     } else {
-                        value =
-                            computeIfAbsent(redirectURL,
-                                            k -> compute(resolver, k));
+                        value = computeIfAbsent(redirectURL, k -> compute(resolver, k));
                     }
                 }
             }
 
             if (value == null) {
-                ContentType type =
-                    ContentType.parse(connection.getContentType());
-                Charset charset =
-                    (type.getCharset() != null) ? type.getCharset() : UTF_8;
+                ContentType type = ContentType.parse(connection.getContentType());
+                Charset charset = (type.getCharset() != null) ? type.getCharset() : UTF_8;
 
                 if (type.getMimeType().matches("(?i).*(html|xml).*")) {
                     try (InputStream in = connection.getInputStream()) {
-                        Document document =
-                            Jsoup.parse(in, charset.name(), url);
+                        Document document = Jsoup.parse(in, charset.name(), url);
 
                         document.outputSettings()
                             .syntax(Document.OutputSettings.Syntax.xml);
@@ -274,8 +257,7 @@ public class URLLicenseInfoParser extends ConcurrentSkipListMap<String,AnyLicens
                          */
                         if (value == null) {
                             value =
-                                document.select("head>link[rel='canonical'][href]")
-                                .stream()
+                                document.select("head>link[rel='canonical'][href]").stream()
                                 .map(t -> t.attr("abs:href"))
                                 .filter(StringUtils::isNotBlank)
                                 .map(t -> get(t))
@@ -296,9 +278,7 @@ public class URLLicenseInfoParser extends ConcurrentSkipListMap<String,AnyLicens
                          */
                         if (value == null) {
                             value =
-                                Stream.of("content, .content, #content",
-                                          "main, .main, #main",
-                                          "body, .body, #body")
+                                Stream.of("content, .content, #content", "main, .main, #main", "body, .body, #body")
                                 .map(t -> document.select(t))
                                 .flatMap(Elements::stream)
                                 .filter(Element::hasText)
@@ -313,9 +293,7 @@ public class URLLicenseInfoParser extends ConcurrentSkipListMap<String,AnyLicens
                         }
 
                         if (value == null) {
-                            value =
-                                new TextLicenseInfo(url,
-                                                    document.wholeText(), url);
+                            value = new TextLicenseInfo(url, document.wholeText(), url);
                             value = resolver.parse(value);
                         }
                     }
@@ -352,8 +330,7 @@ public class URLLicenseInfoParser extends ConcurrentSkipListMap<String,AnyLicens
     }
 
     private boolean equals(String left, String right) {
-        return (Objects.compare(left, right, comparator()) == 0
-                && Objects.compare(right, left, comparator()) == 0);
+        return (Objects.compare(left, right, comparator()) == 0 && Objects.compare(right, left, comparator()) == 0);
     }
 
     private String getCanonicalURL(URLConnection connection) {
@@ -389,9 +366,7 @@ public class URLLicenseInfoParser extends ConcurrentSkipListMap<String,AnyLicens
                 String location = connection.getHeaderField("Location");
 
                 if (isNotBlank(location)) {
-                    redirectURL =
-                        resolve((HttpURLConnection) connection, location)
-                        .toASCIIString();
+                    redirectURL = resolve((HttpURLConnection) connection, location).toASCIIString();
                 }
             }
 

@@ -2,10 +2,8 @@ package ball.maven.plugins.license;
 /*-
  * ##########################################################################
  * License Maven Plugin
- * $Id$
- * $HeadURL$
  * %%
- * Copyright (C) 2020, 2021 Allen D. Ball
+ * Copyright (C) 2020 - 2022 Allen D. Ball
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +33,6 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
  * {@bean.info}
  *
  * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
- * @version $Revision$
  */
 public class TextLicenseInfo extends ExtractedLicenseInfo {
 
@@ -47,8 +44,7 @@ public class TextLicenseInfo extends ExtractedLicenseInfo {
      * @param   urls            The URLs to add.
      */
     public TextLicenseInfo(String id, String text, String... urls) {
-        super(isNotBlank(id) ? id : EMPTY,
-              isNotBlank(text) ? text : EMPTY);
+        super(isNotBlank(id) ? id : EMPTY, isNotBlank(text) ? text : EMPTY);
 
         setName(getLicenseId());
         setSeeAlso((urls != null) ? urls : new String[] { });
@@ -67,8 +63,7 @@ public class TextLicenseInfo extends ExtractedLicenseInfo {
      * @param   license         The {@link ExtractedLicenseInfo} instance.
      * @param   urls            The URLs to add.
      */
-    public static void addSeeAlso(ExtractedLicenseInfo license,
-                                  String... urls) {
+    public static void addSeeAlso(ExtractedLicenseInfo license, String... urls) {
         String[] seeAlso = license.getSeeAlso();
         Set<String> set =
             Stream.of((seeAlso != null) ? seeAlso : new String[] { })

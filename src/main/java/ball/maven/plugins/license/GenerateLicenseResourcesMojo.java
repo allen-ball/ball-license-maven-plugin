@@ -2,10 +2,8 @@ package ball.maven.plugins.license;
 /*-
  * ##########################################################################
  * License Maven Plugin
- * $Id$
- * $HeadURL$
  * %%
- * Copyright (C) 2020, 2021 Allen D. Ball
+ * Copyright (C) 2020 - 2022 Allen D. Ball
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -81,12 +79,9 @@ import static org.apache.maven.plugins.annotations.ResolutionScope.TEST;
  * {@maven.plugin.fields}
  *
  * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
- * @version $Revision$
  */
-@Mojo(name = "generate-license-resources",
-      configurator = "license-mojo-component-configurator",
-      requiresDependencyResolution = TEST,
-      defaultPhase = GENERATE_RESOURCES, requiresProject = true)
+@Mojo(name = "generate-license-resources", configurator = "license-mojo-component-configurator",
+      requiresDependencyResolution = TEST, defaultPhase = GENERATE_RESOURCES, requiresProject = true)
 @NoArgsConstructor @ToString @Slf4j
 public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
     private static final String DEPENDENCIES = "DEPENDENCIES";
@@ -116,12 +111,10 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
         .thenComparing(t -> Objects.toString(t.getUrl(), EMPTY))
         .thenComparingInt(t -> isBlank(t.getName()) ? Objects.hashCode(t) : 0);
 
-    @Parameter(defaultValue = "${project.build.outputDirectory}",
-               property = "license.resources.directory")
+    @Parameter(defaultValue = "${project.build.outputDirectory}", property = "license.resources.directory")
     private File directory = null;
 
-    @Parameter(defaultValue = "META-INF",
-               property = "license.resources.subdirectory")
+    @Parameter(defaultValue = "META-INF", property = "license.resources.subdirectory")
     private String subdirectory = null;
 
     @Parameter(defaultValue = INCLUDE_SCOPE, property = "license.includeScope")
@@ -149,9 +142,7 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
 
                 if (ARCHIVE_PACKAGING.contains(packaging)) {
                     if (directory.exists() && (! directory.isDirectory())) {
-                        throw new FileAlreadyExistsException(directory.toString(),
-                                                             null,
-                                                             "Is not a directory");
+                        throw new FileAlreadyExistsException(directory.toString(), null, "Is not a directory");
                     }
 
                     Path parent = directory.toPath();
@@ -170,8 +161,7 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                      */
                     Set<String> scope = getScope();
                     List<Callable<AnyLicenseInfo>> tasks =
-                        project.getArtifacts()
-                        .stream()
+                        project.getArtifacts().stream()
                         .filter(t -> scope.contains(t.getScope()))
                         .<Callable<AnyLicenseInfo>>map(t -> (() -> getLicense(t)))
                         .collect(toList());
@@ -181,8 +171,7 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                      * Get the records for the report.
                      */
                     List<Tuple> tuples =
-                        project.getArtifacts()
-                        .stream()
+                        project.getArtifacts().stream()
                         .filter(t -> scope.contains(t.getScope()))
                         .map(t -> new Tuple(getLicense(t), cache.get(t), t))
                         .collect(toList());
@@ -211,15 +200,13 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
                     if ((! report.isEmpty()) || (! skipIfEmpty)) {
                         generateReport(report, parent);
                     } else {
-                        log.info("Skipping empty {} resource generation",
-                                 DEPENDENCIES);
+                        log.info("Skipping empty {} resource generation", DEPENDENCIES);
                     }
                 } else {
                     log.warn("Skipping for '{}' packaging", packaging);
                 }
             } else {
-                log.info("Skipping {} and {} resource generation",
-                         getFile().getName(), DEPENDENCIES);
+                log.info("Skipping {} and {} resource generation", getFile().getName(), DEPENDENCIES);
             }
         } catch (IOException exception) {
             fail(exception.getMessage(), exception);
@@ -231,8 +218,7 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
             } else if (throwable instanceof MojoFailureException) {
                 throw (MojoFailureException) throwable;
             } else {
-                throw new MojoExecutionException(throwable.getMessage(),
-                                                 throwable);
+                throw new MojoExecutionException(throwable.getMessage(), throwable);
             }
         } finally {
             catalog.flush();
@@ -284,9 +270,7 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
         File file = getFile();
 
         if (file.exists() && file.isDirectory()) {
-            throw new FileAlreadyExistsException(file.toString(),
-                                                 null,
-                                                 "Is not a file or link");
+            throw new FileAlreadyExistsException(file.toString(), null, "Is not a file or link");
         }
 
         Path source = file.toPath();
@@ -297,30 +281,24 @@ public class GenerateLicenseResourcesMojo extends AbstractLicenseMojo {
         Files.setLastModifiedTime(target, Files.getLastModifiedTime(source));
     }
 
-    private void generateReport(TreeMap<AnyLicenseInfo,Map<Model,List<Tuple>>> report,
-                                Path parent) throws Exception {
+    private void generateReport(TreeMap<AnyLicenseInfo,Map<Model,List<Tuple>>> report, Path parent) throws Exception {
         Path target = parent.resolve(DEPENDENCIES);
 
-        try (PrintWriter out =
-                 new PrintWriter(Files.newBufferedWriter(target,
-                                                         CREATE, WRITE,
-                                                         TRUNCATE_EXISTING))) {
+        try (PrintWriter out = new PrintWriter(Files.newBufferedWriter(target, CREATE, WRITE, TRUNCATE_EXISTING))) {
             String boundary = String.join(EMPTY, Collections.nCopies(78, "-"));
 
             out.println(boundary);
             out.println(target.getFileName() + " " + project.getArtifact());
             out.println(boundary);
 
-            for (Map.Entry<AnyLicenseInfo,Map<Model,List<Tuple>>> section :
-                     report.entrySet()) {
+            for (Map.Entry<AnyLicenseInfo,Map<Model,List<Tuple>>> section : report.entrySet()) {
                 out.println(boundary);
                 out.println(toString(section.getKey()));
                 out.println(boundary);
 
                 boolean first = true;
 
-                for (Map.Entry<Model,List<Tuple>> group :
-                         section.getValue().entrySet()) {
+                for (Map.Entry<Model,List<Tuple>> group : section.getValue().entrySet()) {
                     if (first) {
                         first = false;
                     } else {
