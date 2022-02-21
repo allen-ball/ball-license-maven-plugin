@@ -107,8 +107,7 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
         .thenComparing(t -> (! (t instanceof ExtractedLicenseInfo)), TRUTH)
         .thenComparing(LicenseUtilityMethods::isFullySpdxListed, TRUTH)
         .thenComparing(t -> (t instanceof LicenseSet), TRUTH)
-        .thenComparing(LicenseUtilityMethods::countOf,
-                       Comparator.<Integer>reverseOrder())
+        .thenComparing(LicenseUtilityMethods::countOf, Comparator.<Integer>reverseOrder())
         .thenComparing(t -> (t instanceof WithExceptionOperator), TRUTH)
         .thenComparing(t -> (t instanceof OrLaterOperator), TRUTH)
         .thenComparing(LicenseUtilityMethods::isPartiallySpdxListed, TRUTH);
@@ -381,8 +380,7 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
         } catch (Exception exception) {
         }
 
-        AnyLicenseInfo option2 =
-            new URLLicenseInfo(isNotBlank(id) ? id : urls[0], urls);
+        AnyLicenseInfo option2 = new URLLicenseInfo(isNotBlank(id) ? id : urls[0], urls);
         AnyLicenseInfo[] options =
             Stream.of(option0, option1, option2)
             .filter(Objects::nonNull)
