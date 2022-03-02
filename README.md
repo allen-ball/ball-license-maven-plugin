@@ -7,6 +7,8 @@ Description
 
 Maven plugin for generating JAR license and licensing assets.
 
+Javadoc is published at <https://allen-ball.github.io/ball-license-maven-plugin/>.
+
 
 License
 -------
