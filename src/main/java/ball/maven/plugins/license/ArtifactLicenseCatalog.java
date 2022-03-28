@@ -90,6 +90,8 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
 
     private static final String CATALOG = "artifact-license-catalog.xml";
 
+    private static final int FLUSH_PERIOD = 8;
+
     private static final Predicate<String> INCLUDE =
         Pattern.compile("(?i)^(.*/|)(LICENSE([.][^/]+)?|about.html)$")
         .asPredicate();
@@ -207,6 +209,10 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
             value = compute((Artifact) key);
 
             put((Artifact) key, value);
+
+            if ((size() % FLUSH_PERIOD) == 0) {
+                flush();
+            }
         }
 
         return value;
@@ -222,8 +228,7 @@ public class ArtifactLicenseCatalog extends TreeMap<Artifact,AnyLicenseInfo> {
         List<AnyLicenseInfo> scanned = Collections.emptyList();
 
         try {
-            JarFile jar =
-                ((JarURLConnection) url.openConnection()).getJarFile();
+            JarFile jar = ((JarURLConnection) url.openConnection()).getJarFile();
             Pattern pattern = Pattern.compile("((?<id>.+);link=)?(?<url>.*)");
 
             bundle =
