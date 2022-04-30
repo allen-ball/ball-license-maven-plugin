@@ -76,7 +76,11 @@ import static org.apache.maven.plugins.annotations.ResolutionScope.TEST;
  * {@link org.apache.maven.plugin.Mojo} to generate LICENSE and DEPENDENCIES
  * resources.
  *
+ * {@injected.fields}
+ *
  * {@maven.plugin.fields}
+ *
+ * {@bean.info}
  *
  * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
  */

@@ -49,6 +49,8 @@ import static org.spdx.compare.LicenseCompareHelper.isTextStandardLicense;
 /**
  * {@link org.apache.maven.plugin.Mojo} to update project LICENSE.
  *
+ * {@injected.fields}
+ *
  * {@maven.plugin.fields}
  *
  * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
