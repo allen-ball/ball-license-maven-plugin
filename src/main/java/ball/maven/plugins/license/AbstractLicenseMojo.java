@@ -49,6 +49,10 @@ import static lombok.AccessLevel.PROTECTED;
 /**
  * Abstract base class for license {@link org.apache.maven.plugin.Mojo}s.
  *
+ * {@injected.fields}
+ *
+ * {@bean.info}
+ *
  * @author {@link.uri mailto:ball@hcf.dev Allen D. Ball}
  */
 @NoArgsConstructor(access = PROTECTED) @Getter @ToString @Slf4j
