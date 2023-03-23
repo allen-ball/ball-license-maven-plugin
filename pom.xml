@@ -24,7 +24,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>dev.hcf.ball</groupId>
   <artifactId>ball-license-maven-plugin</artifactId>
-  <version>2.2.7.20230305</version>
+  <version>2.2.8.20230325</version>
   <packaging>maven-plugin</packaging>
   <name>${project.groupId}:${project.artifactId}</name>
   <description>License Maven Plugin</description>
@@ -32,7 +32,7 @@
   <parent>
     <groupId>dev.hcf.ball</groupId>
     <artifactId>parent</artifactId>
-    <version>2023.1.0</version>
+    <version>2023.1.1</version>
     <relativePath>../ball/parent/pom.xml</relativePath>
   </parent>
   <inceptionYear>2020</inceptionYear>
