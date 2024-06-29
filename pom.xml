@@ -24,13 +24,13 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>dev.hcf.ball</groupId>
   <artifactId>ball-license-maven-plugin-gh-pages</artifactId>
-  <version>2.3.2.20240605</version>
+  <version>2.3.3.20240628</version>
   <packaging>pom</packaging>
   <name>${javadoc.groupId}:${javadoc.artifactId} API</name>
   <parent>
     <groupId>dev.hcf.ball</groupId>
     <artifactId>javadoc-parent</artifactId>
-    <version>2024.0.0</version>
+    <version>2024.0.1</version>
     <relativePath>../ball/javadoc-parent/pom.xml</relativePath>
   </parent>
   <organization>
@@ -48,6 +48,10 @@
       <groupId>${javadoc.groupId}</groupId>
       <artifactId>${javadoc.artifactId}</artifactId>
       <version>${javadoc.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>javax.annotation</groupId>
+      <artifactId>javax.annotation-api</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.maven</groupId>
