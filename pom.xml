@@ -2,7 +2,7 @@
 <!--
   ##########################################################################
   %%
-  Copyright (C) 2020 - 2025 Allen D. Ball
+  Copyright (C) 2020 - 2026 Allen D. Ball
   %%
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -51,8 +51,8 @@
     <maven-plugin-goal-prefix>ball-license</maven-plugin-goal-prefix>
     <maven.javadoc.skip>true</maven.javadoc.skip>
 
-    <mavenVersion>3.9.11</mavenVersion>
-    <resolverVersion>1.9.24</resolverVersion>
+    <mavenVersion>3.10.1</mavenVersion>
+    <resolverVersion>2.0.25</resolverVersion>
   </properties>
   <dependencies verbose="true">
     <dependency>
